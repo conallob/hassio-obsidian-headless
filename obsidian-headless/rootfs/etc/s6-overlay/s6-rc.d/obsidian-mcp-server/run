@@ -1,0 +1,64 @@
+#!/usr/bin/with-contenv bashio
+# s6 service: obsidian-mcp
+# Runs obsidian-vault-mcp HTTP server, with optional Tailscale tunnel.
+# Exits cleanly (oneshot-style) when enable_mcp is false so s6 does not restart it.
+
+. /usr/local/bin/build-env.sh
+
+if [ "${ENABLE_MCP}" != "true" ]; then
+    bashio::log.info "MCP server disabled (enable_mcp: false). Idling."
+    exec sleep inf
+fi
+
+bashio::log.info "Starting Obsidian MCP server (tunnel: ${TUNNEL_MODE})"
+
+# --- Validate auth config ---
+# obsidian-vault-mcp supports bearer token auth and/or OAuth simultaneously.
+# At least one credential must be provided.
+if [ -z "${VAULT_MCP_TOKEN}" ] && [ -z "${VAULT_OAUTH_CLIENT_SECRET}" ]; then
+    bashio::log.fatal "Set mcp_auth_token (bearer) and/or oauth_client_secret in add-on options."
+    exit 1
+fi
+
+# --- Tailscale setup ---
+if [ "${TUNNEL_MODE}" = "tailscale" ]; then
+    if [ -z "${TAILSCALE_AUTH_KEY}" ]; then
+        bashio::log.fatal "tailscale_auth_key is required when tunnel_mode is 'tailscale'."
+        exit 1
+    fi
+
+    bashio::log.info "Configuring Tailscale..."
+    if ! command -v tailscale &>/dev/null; then
+        apt-get install -y --no-install-recommends tailscale
+    fi
+
+    mkdir -p /data/tailscale
+    tailscaled --tun=userspace-networking --state=/data/tailscale/state &
+    sleep 2
+
+    tailscale up \
+        --authkey="${TAILSCALE_AUTH_KEY}" \
+        --hostname="obsidian-mcp-ha" \
+        --accept-routes=false \
+        --ssh=false
+
+    bashio::log.info "Tailscale up. MCP will be reachable on your tailnet."
+fi
+
+# --- TLS (direct HTTPS) ---
+# obsidian-vault-mcp does not natively support TLS; for tunnel_mode=https
+# the expectation is that an external reverse proxy (e.g. nginx via the HA
+# nginx add-on) terminates TLS. We validate the cert/key exist so the
+# operator gets a clear error if the paths are wrong.
+if [ "${TUNNEL_MODE}" = "https" ]; then
+    if [ ! -f "${TLS_CERT_PATH}" ] || [ ! -f "${TLS_KEY_PATH}" ]; then
+        bashio::log.fatal "TLS cert/key not found at ${TLS_CERT_PATH} / ${TLS_KEY_PATH}."
+        exit 1
+    fi
+    bashio::log.info "TLS mode: proxy your reverse-proxy to http://localhost:${VAULT_MCP_PORT}"
+fi
+
+# --- Launch MCP server ---
+# vault-mcp reads all configuration from environment variables (see build-env.sh).
+# VAULT_PATH, VAULT_MCP_PORT, VAULT_MCP_TOKEN, VAULT_OAUTH_CLIENT_* are already exported.
+exec vault-mcp

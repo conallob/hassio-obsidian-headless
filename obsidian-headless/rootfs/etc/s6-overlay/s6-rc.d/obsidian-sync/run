@@ -1,0 +1,45 @@
+#!/usr/bin/with-contenv bashio
+# s6 service: obsidian-sync
+# Runs ob sync --continuous, supervised by s6-overlay.
+#
+# Auth: ob checks OBSIDIAN_AUTH_TOKEN env var before reading from disk.
+# State: XDG_CONFIG_HOME=/data so ob's config lives in /data/obsidian-headless/
+#        (persistent across add-on restarts and updates).
+
+. /usr/local/bin/build-env.sh
+
+if [ -z "${OBSIDIAN_AUTH_TOKEN}" ]; then
+    bashio::log.fatal "obsidian_auth_token is required. Find it in the Obsidian desktop app:"
+    bashio::log.fatal "  Settings → General → Account → your API token"
+    exit 1
+fi
+
+if [ -z "${VAULT_NAME}" ]; then
+    bashio::log.fatal "vault_name is required."
+    exit 1
+fi
+
+mkdir -p "${VAULT_PATH}"
+
+# --- First-run vault setup ---
+# ob stores per-vault state under XDG_CONFIG_HOME/obsidian-headless/sync/<vault-id>/
+# We use a marker file to avoid re-running sync-setup on every restart.
+SETUP_MARKER="/data/obsidian-headless/.vault-configured"
+
+if [ ! -f "${SETUP_MARKER}" ]; then
+    bashio::log.info "First run: linking vault '${VAULT_NAME}' to ${VAULT_PATH} ..."
+
+    SETUP_ARGS="--vault \"${VAULT_NAME}\" --path \"${VAULT_PATH}\""
+    if [ -n "${VAULT_PASSWORD}" ]; then
+        SETUP_ARGS="${SETUP_ARGS} --password \"${VAULT_PASSWORD}\""
+    fi
+
+    eval "ob sync-setup ${SETUP_ARGS}"
+    mkdir -p /data/obsidian-headless
+    touch "${SETUP_MARKER}"
+    bashio::log.info "Vault linked successfully."
+fi
+
+# --- Continuous sync ---
+bashio::log.info "Starting continuous sync for vault '${VAULT_NAME}' at ${VAULT_PATH}"
+exec ob sync --continuous --path "${VAULT_PATH}"

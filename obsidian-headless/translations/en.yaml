@@ -1,0 +1,79 @@
+configuration:
+  obsidian_auth_token:
+    name: Obsidian Auth Token
+    description: >-
+      Your Obsidian Sync auth token. Obtain it by running:
+      `docker run --rm -it ghcr.io/belphemur/obsidian-headless-sync-docker:latest get-token`
+      or `npx obsidian-headless get-token` and following the prompts.
+  vault_name:
+    name: Vault Name
+    description: >-
+      The exact name of your Obsidian vault as it appears in Obsidian Sync.
+      Case-sensitive. Run `ob sync-list-remote` to confirm the name.
+  vault_password:
+    name: Vault Encryption Password
+    description: >-
+      Only required if your vault has end-to-end encryption enabled
+      (Settings → Sync → Encryption password in Obsidian). Leave blank if not used.
+  mcp_auth_mode:
+    name: MCP Authentication Mode
+    description: >-
+      Authentication strategy for the MCP HTTP server.
+      Use 'jwt' for simple shared-secret auth (good for Tailscale).
+      Use 'oauth' for OAuth 2.1 with an external provider (required for Claude.ai remote MCP).
+  mcp_auth_secret_key:
+    name: JWT Secret Key
+    description: >-
+      A random secret of 32+ characters used to sign JWT tokens.
+      Required when auth mode is 'jwt'. Generate with:
+      `openssl rand -hex 32`
+  mcp_allowed_origins:
+    name: Allowed CORS Origins
+    description: >-
+      Comma-separated list of origins permitted to connect to the MCP server.
+      Example: `https://claude.ai,https://your-domain.com`
+      Leave blank during initial setup.
+  mcp_log_level:
+    name: Log Level
+    description: Verbosity of MCP server logs. Use 'debug' when troubleshooting.
+  oauth_issuer_url:
+    name: OAuth Issuer URL
+    description: >-
+      URL of your OAuth 2.1 provider. Required when auth mode is 'oauth'.
+      Example for Google: `https://accounts.google.com`
+  oauth_audience:
+    name: OAuth Audience
+    description: >-
+      The audience claim expected in OAuth tokens. Typically your OAuth client ID.
+  oauth_jwks_uri:
+    name: OAuth JWKS URI
+    description: >-
+      Optional. URI to fetch the provider's public signing keys.
+      If blank, derived automatically from the issuer URL.
+  tunnel_mode:
+    name: Tunnel Mode
+    description: >-
+      How the MCP server is exposed externally.
+      'none': only reachable on your local network (port 3010).
+      'tailscale': exposed on your Tailnet via Tailscale Funnel.
+      'https': direct TLS using your own certificate files.
+  tailscale_auth_key:
+    name: Tailscale Auth Key
+    description: >-
+      Tailscale auth key for this device. Generate a reusable key at
+      https://login.tailscale.com/admin/settings/keys
+      Required when tunnel mode is 'tailscale'.
+  tls_cert_path:
+    name: TLS Certificate Path
+    description: >-
+      Path to your TLS certificate file (PEM format).
+      The /ssl directory is mapped from your HA SSL folder.
+      Default: /ssl/fullchain.pem
+  tls_key_path:
+    name: TLS Private Key Path
+    description: >-
+      Path to your TLS private key file (PEM format).
+      Default: /ssl/privkey.pem
+
+network:
+  3010/tcp: MCP HTTP server port

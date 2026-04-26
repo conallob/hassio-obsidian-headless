@@ -1,0 +1,76 @@
+name: Obsidian Headless
+version: "0.1.0"
+slug: obsidian_headless
+description: >-
+  Syncs your Obsidian vault via Obsidian Sync (headless daemon). Optionally
+  exposes the vault as a remote MCP server with bearer-token or OAuth 2.1
+  authentication. Supports Tailscale and direct HTTPS access.
+url: https://github.com/conallob/ha-obsidian-mcp
+arch:
+  - aarch64
+  - amd64
+init: false
+homeassistant_api: false
+host_network: false
+
+ports:
+  8420/tcp: 8420
+
+ports_description:
+  8420/tcp: MCP HTTP server (obsidian-vault-mcp, streamable-HTTP transport)
+
+map:
+  - type: share
+    path: /share/obsidian-vault
+    read_only: false
+  - type: ssl
+    read_only: true
+
+options:
+  # --- Obsidian Sync ---
+  # Find your API token in the Obsidian desktop app:
+  #   Settings → General → Account → Copy API token
+  obsidian_auth_token: ""
+
+  # Name of the remote vault to sync (from ob sync-list-remote)
+  vault_name: ""
+
+  # E2E encryption password — only required if your vault uses end-to-end encryption
+  vault_password: ""
+
+  # --- MCP server (opt-in) ---
+  enable_mcp: false
+
+  # MCP auth — required when enable_mcp is true.
+  # Bearer-token mode: set mcp_auth_token to a long random secret.
+  # OAuth mode: set oauth_client_secret (and optionally oauth_client_id).
+  # Both can be set simultaneously.
+  mcp_auth_token: ""
+  oauth_client_id: "vault-mcp-client"
+  oauth_client_secret: ""
+
+  # --- Tunnel mode (only relevant when enable_mcp is true) ---
+  # "none"      — port 8420 exposed directly (use HA firewall / VPN)
+  # "tailscale" — add-on joins your tailnet; port not needed externally
+  # "https"     — set tls_cert_path/tls_key_path; add-on expects a reverse proxy
+  tunnel_mode: "none"
+
+  # Tailscale options (only if tunnel_mode = tailscale)
+  tailscale_auth_key: ""
+
+  # Direct HTTPS options (only if tunnel_mode = https)
+  tls_cert_path: "/ssl/fullchain.pem"
+  tls_key_path: "/ssl/privkey.pem"
+
+schema:
+  obsidian_auth_token: str
+  vault_name: str
+  vault_password: str?
+  enable_mcp: bool
+  mcp_auth_token: str?
+  oauth_client_id: str?
+  oauth_client_secret: str?
+  tunnel_mode: "list(none|tailscale|https)"
+  tailscale_auth_key: str?
+  tls_cert_path: str?
+  tls_key_path: str?
