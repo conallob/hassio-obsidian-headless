@@ -119,7 +119,7 @@ jobs:
       - name: Create and push multi-arch manifest
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-          podman manifest create multi-arch-manifest \
+          podman manifest create --all multi-arch-manifest \
             docker://${IMAGE}:build-amd64 \
             docker://${IMAGE}:build-aarch64
           for tag in ${{ steps.tags.outputs.tags }}; do
