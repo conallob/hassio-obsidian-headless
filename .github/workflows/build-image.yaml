@@ -17,7 +17,7 @@ env:
 jobs:
   build:
     name: Build image (${{ matrix.build_arch }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
@@ -28,70 +28,43 @@ jobs:
         include:
           - build_arch: amd64
             platform: linux/amd64
+            runner: ubuntu-24.04
             build_from: ghcr.io/home-assistant/amd64-base-debian:bookworm
           - build_arch: aarch64
             platform: linux/arm64
+            runner: ubuntu-24.04-arm
             build_from: ghcr.io/home-assistant/aarch64-base-debian:bookworm
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Install podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
 
       - name: Log in to GHCR
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ${{ env.REGISTRY }} \
+            --username ${{ github.actor }} --password-stdin
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=edge,branch=main
-            type=sha,format=short
-
-      - name: Build and push by digest
+      - name: Build image
         id: build
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: ${{ matrix.platform }}
-          labels: ${{ steps.meta.outputs.labels }}
-          push: ${{ github.event_name != 'pull_request' }}
-          build-args: |
-            BUILD_FROM=${{ matrix.build_from }}
-            BUILD_ARCH=${{ matrix.build_arch }}
-          cache-from: type=gha,scope=${{ matrix.build_arch }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.build_arch }}
-          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+        run: |
+          podman build \
+            --build-arg BUILD_FROM=${{ matrix.build_from }} \
+            --build-arg BUILD_ARCH=${{ matrix.build_arch }} \
+            --manifest ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:build-${{ matrix.build_arch }} \
+            .
 
-      - name: Export digest
+      - name: Push arch image
         if: github.event_name != 'pull_request'
         run: |
-          mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
-
-      - name: Upload digest
-        if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: digests-${{ matrix.build_arch }}
-          path: /tmp/digests/*
-          if-no-files-found: error
-          retention-days: 1
+          podman manifest push \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:build-${{ matrix.build_arch }} \
+            docker://${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:build-${{ matrix.build_arch }}
 
   merge:
     name: Create multi-arch manifest
@@ -103,42 +76,46 @@ jobs:
       packages: write
 
     steps:
-      - name: Download digests
-        uses: actions/download-artifact@v4
-        with:
-          path: /tmp/digests
-          pattern: digests-*
-          merge-multiple: true
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Install podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ${{ env.REGISTRY }} \
+            --username ${{ github.actor }} --password-stdin
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=edge,branch=main
-            type=sha,format=short
+      - name: Compute tags
+        id: tags
+        run: |
+          REF="${{ github.ref }}"
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          TAGS="${IMAGE}:edge"
+          SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
+          TAGS="${TAGS} ${IMAGE}:${SHA_SHORT}"
+          if [[ "${REF}" == refs/tags/v* ]]; then
+            VERSION="${REF#refs/tags/v}"
+            TAGS="${TAGS} ${IMAGE}:${VERSION}"
+            MAJOR_MINOR=$(echo "${VERSION}" | cut -d. -f1,2)
+            TAGS="${TAGS} ${IMAGE}:${MAJOR_MINOR}"
+          fi
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
 
       - name: Create and push multi-arch manifest
-        working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create \
-            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          podman manifest create multi-arch-manifest \
+            docker://${IMAGE}:build-amd64 \
+            docker://${IMAGE}:build-aarch64
+          for tag in ${{ steps.tags.outputs.tags }}; do
+            podman manifest push multi-arch-manifest "docker://${tag}"
+          done
 
       - name: Inspect manifest
         run: |
-          docker buildx imagetools inspect \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          podman manifest inspect \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:edge

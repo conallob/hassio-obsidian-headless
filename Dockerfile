@@ -1,3 +1,6 @@
+# BUILD_FROM must be declared before any FROM to be usable in a FROM instruction.
+ARG BUILD_FROM
+
 # Stage 1: install obsidian-vault-mcp into a prefix we can copy across.
 # Pinned to amd64 because the Python build tools are x86-only in CI;
 # the installed pure-Python wheel works on any arch at runtime.
@@ -16,7 +19,6 @@ RUN pip install --no-cache-dir --prefix=/install .
 # Stage 2: Final HA add-on image
 # BUILD_FROM is passed by the CI matrix (one arch-specific HA base image per job).
 # Explicit FROM required — Supervisor 2026.04.0+ dropped build.yaml.
-ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
 ARG BUILD_ARCH
