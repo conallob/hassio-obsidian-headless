@@ -16,8 +16,8 @@ env:
 
 jobs:
   build:
-    name: Build image (${{ matrix.platform }})
-    runs-on: ${{ matrix.runner }}
+    name: Build image (${{ matrix.build_arch }})
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
@@ -26,10 +26,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: linux/amd64
-            runner: ubuntu-latest
-          - platform: linux/arm64
-            runner: ubuntu-latest
+          - build_arch: amd64
+            platform: linux/amd64
+            build_from: ghcr.io/home-assistant/amd64-base-debian:bookworm
+          - build_arch: aarch64
+            platform: linux/arm64
+            build_from: ghcr.io/home-assistant/aarch64-base-debian:bookworm
 
     steps:
       - name: Checkout
@@ -68,8 +70,11 @@ jobs:
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           push: ${{ github.event_name != 'pull_request' }}
-          cache-from: type=gha,scope=${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+          build-args: |
+            BUILD_FROM=${{ matrix.build_from }}
+            BUILD_ARCH=${{ matrix.build_arch }}
+          cache-from: type=gha,scope=${{ matrix.build_arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.build_arch }}
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
 
       - name: Export digest
@@ -83,7 +88,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          name: digests-${{ matrix.build_arch }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1

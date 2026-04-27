@@ -1,5 +1,7 @@
-# Stage 1: install obsidian-vault-mcp into a prefix we can copy across
-FROM python:3.12-slim AS mcp-builder
+# Stage 1: install obsidian-vault-mcp into a prefix we can copy across.
+# Pinned to amd64 because the Python build tools are x86-only in CI;
+# the installed pure-Python wheel works on any arch at runtime.
+FROM --platform=linux/amd64 python:3.12-slim AS mcp-builder
 
 WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends git build-essential && rm -rf /var/lib/apt/lists/*
@@ -11,14 +13,17 @@ RUN git clone --depth 1 https://github.com/jimprosser/obsidian-web-mcp.git .
 RUN pip install --no-cache-dir --prefix=/install .
 
 
-# Stage 2: Final HA add-on image (Debian bookworm, aarch64)
-# Explicit FROM required — Supervisor 2026.04.0+ dropped build.yaml
-FROM ghcr.io/home-assistant/aarch64-base-debian:bookworm
+# Stage 2: Final HA add-on image
+# BUILD_FROM is passed by the CI matrix (one arch-specific HA base image per job).
+# Explicit FROM required — Supervisor 2026.04.0+ dropped build.yaml.
+ARG BUILD_FROM
+FROM ${BUILD_FROM}
 
+ARG BUILD_ARCH
 LABEL \
   io.hass.name="Obsidian Headless" \
   io.hass.description="Obsidian Sync headless daemon + optional remote MCP server" \
-  io.hass.arch="aarch64" \
+  io.hass.arch="${BUILD_ARCH}" \
   io.hass.type="addon" \
   io.hass.version="0.1.0"
 
