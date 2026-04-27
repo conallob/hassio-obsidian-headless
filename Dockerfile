@@ -43,7 +43,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 # Install obsidian-headless (official Obsidian Sync CLI, requires ob binary)
-RUN npm install -g obsidian-headless
+RUN npm install -g obsidian-headless@"${OBSIDIAN_HEADLESS_VERSION}"
 
 # Copy the installed obsidian-vault-mcp package + its deps from the builder
 COPY --from=mcp-builder /install /usr/local

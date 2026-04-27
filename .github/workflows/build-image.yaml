@@ -13,6 +13,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  OBSIDIAN_HEADLESS_VERSION: "0.0.9"
 
 jobs:
   build:
