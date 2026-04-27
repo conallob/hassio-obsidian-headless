@@ -50,12 +50,23 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ${{ env.REGISTRY }} \
             --username ${{ github.actor }} --password-stdin
 
+      - name: Compute version
+        id: version
+        run: |
+          REF="${{ github.ref }}"
+          if [[ "${REF}" == refs/tags/v* ]]; then
+            echo "version=${REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$(echo '${{ github.sha }}' | cut -c1-7)" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build image
         id: build
         run: |
           podman build \
             --build-arg BUILD_FROM=${{ matrix.build_from }} \
             --build-arg BUILD_ARCH=${{ matrix.build_arch }} \
+            --build-arg BUILD_VERSION=${{ steps.version.outputs.version }} \
             --manifest ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:build-${{ matrix.build_arch }} \
             .
 

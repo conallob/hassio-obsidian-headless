@@ -2,9 +2,7 @@
 ARG BUILD_FROM
 
 # Stage 1: install obsidian-vault-mcp into a prefix we can copy across.
-# Pinned to amd64 because the Python build tools are x86-only in CI;
-# the installed pure-Python wheel works on any arch at runtime.
-FROM --platform=linux/amd64 python:3.12-slim AS mcp-builder
+FROM python:3.12-slim AS mcp-builder
 
 WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends git build-essential && rm -rf /var/lib/apt/lists/*
@@ -22,12 +20,13 @@ RUN pip install --no-cache-dir --prefix=/install .
 FROM ${BUILD_FROM}
 
 ARG BUILD_ARCH
+ARG BUILD_VERSION=dev
 LABEL \
   io.hass.name="Obsidian Headless" \
   io.hass.description="Obsidian Sync headless daemon + optional remote MCP server" \
   io.hass.arch="${BUILD_ARCH}" \
   io.hass.type="addon" \
-  io.hass.version="0.1.0"
+  io.hass.version="${BUILD_VERSION}"
 
 # obsidian-headless requires Node >=22; Debian bookworm ships Node 18.
 # Install Node 22 LTS via the NodeSource setup script.
