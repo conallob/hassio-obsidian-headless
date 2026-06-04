@@ -1,5 +1,6 @@
 # BUILD_FROM must be declared before any FROM to be usable in a FROM instruction.
 ARG BUILD_FROM
+ARG RMAPI_VERSION=0.0.25
 
 # Stage 1: install obsidian-vault-mcp into a prefix we can copy across.
 FROM python:3.12-slim AS mcp-builder
@@ -21,6 +22,7 @@ FROM ${BUILD_FROM}
 
 ARG BUILD_ARCH
 ARG BUILD_VERSION=dev
+ARG RMAPI_VERSION=0.0.25
 LABEL \
   io.hass.name="Obsidian Headless" \
   io.hass.description="Obsidian Sync headless daemon + optional remote MCP server" \
@@ -43,7 +45,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 # Install obsidian-headless (official Obsidian Sync CLI, requires ob binary)
+ARG OBSIDIAN_HEADLESS_VERSION=0.0.9
 RUN npm install -g obsidian-headless@"${OBSIDIAN_HEADLESS_VERSION}"
+
+# Install rmapi (reMarkable Cloud CLI) — single static binary, arch-aware
+RUN ARCH=$(dpkg --print-architecture) && \
+    curl -fsSL \
+      "https://github.com/juruen/rmapi/releases/download/v${RMAPI_VERSION}/rmapi-linux-${ARCH}" \
+      -o /usr/local/bin/rmapi && \
+    chmod +x /usr/local/bin/rmapi
 
 # Copy the installed obsidian-vault-mcp package + its deps from the builder
 COPY --from=mcp-builder /install /usr/local
@@ -54,6 +64,8 @@ COPY rootfs /
 RUN chmod +x \
     /etc/s6-overlay/s6-rc.d/obsidian-sync/run \
     /etc/s6-overlay/s6-rc.d/obsidian-mcp-server/run \
-    /usr/local/bin/build-env.sh
+    /etc/s6-overlay/s6-rc.d/remarkable-sync/run \
+    /usr/local/bin/build-env.sh \
+    /usr/local/bin/remarkable-sync.sh
 
 EXPOSE 8420
