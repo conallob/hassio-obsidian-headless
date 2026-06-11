@@ -5,7 +5,8 @@ description: >-
   Syncs your Obsidian vault via Obsidian Sync (headless daemon). Optionally
   exposes the vault as a remote MCP server with bearer-token or OAuth 2.1
   authentication. Supports Tailscale and direct HTTPS access.
-url: https://github.com/conallob/ha-obsidian-mcp
+url: https://github.com/conallob/hassio-obsidian-headless
+image: ghcr.io/conallob/hassio-obsidian-headless
 arch:
   - aarch64
   - amd64
