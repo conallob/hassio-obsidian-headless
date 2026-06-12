@@ -12,12 +12,8 @@ fi
 
 REMARKABLE_DEVICE_TOKEN="$(bashio::config 'remarkable_device_token')"
 export REMARKABLE_DEVICE_TOKEN
-
-if [ -z "${REMARKABLE_DEVICE_TOKEN}" ]; then
-    bashio::log.fatal "remarkable_device_token is required when enable_remarkable is true."
-    bashio::log.fatal "Obtain a device token by running: rmapi (https://github.com/ddvk/rmapi)"
-    exit 1
-fi
+# Token may also be saved by the registration UI at /data/remarkable-sync/device.token.
+# The binary falls back to that file automatically; no fatal here.
 
 REMARKABLE_OUTPUT_DIR="$(bashio::config 'remarkable_output_dir')"
 export REMARKABLE_OUTPUT_DIR="${REMARKABLE_OUTPUT_DIR:-reMarkable}"
@@ -34,6 +30,8 @@ fi
 
 export SYNC_INTERVAL="$(bashio::config 'remarkable_sync_interval' 2>/dev/null || echo 300)"
 export VAULT_PATH="${VAULT_PATH:-/share/obsidian-vault}"
+export REMARKABLE_REGISTER_PORT="8421"
 
 bashio::log.info "Starting remarkable-sync (interval: ${SYNC_INTERVAL}s, output: ${VAULT_PATH}/${REMARKABLE_OUTPUT_DIR})"
+bashio::log.info "Registration UI available at http://<ha-host>:8421/"
 exec /usr/local/bin/remarkable-sync --continuous

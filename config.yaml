@@ -15,9 +15,11 @@ host_network: false
 
 ports:
   8420/tcp: 8420
+  8421/tcp: 8421
 
 ports_description:
   8420/tcp: MCP HTTP server (obsidian-vault-mcp, streamable-HTTP transport)
+  8421/tcp: reMarkable device registration UI (open in browser to pair your tablet)
 
 map:
   - type: share
