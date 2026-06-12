@@ -37,26 +37,56 @@ import (
 	"time"
 
 	"remarkable-sync/internal/ocr"
+	"remarkable-sync/internal/register"
 	"remarkable-sync/internal/rmcloud"
 )
 
 func main() {
-	deviceToken := flag.String("token", env("REMARKABLE_DEVICE_TOKEN", ""), "reMarkable device token")
+	deviceToken := flag.String("token", env("REMARKABLE_DEVICE_TOKEN", ""), "reMarkable device token (falls back to saved token file)")
 	vaultPath := flag.String("vault-path", env("VAULT_PATH", "/share/obsidian-vault"), "Obsidian vault root path")
 	outputDir := flag.String("output-dir", env("REMARKABLE_OUTPUT_DIR", "reMarkable"), "sub-directory within vault for reMarkable notes")
-	cacheDir := flag.String("cache-dir", env("REMARKABLE_CACHE_DIR", "/data/remarkable-sync"), "directory for raw blob cache")
+	cacheDir := flag.String("cache-dir", env("REMARKABLE_CACHE_DIR", "/data/remarkable-sync"), "directory for raw blob cache and saved token")
 	haOCRURL := flag.String("ha-ocr-url", env("HA_OCR_URL", ""), "Home Assistant OCR endpoint URL (optional)")
 	haOCRToken := flag.String("ha-ocr-token", env("HA_OCR_TOKEN", ""), "Home Assistant long-lived access token")
 	haOCREntity := flag.String("ha-ocr-entity", env("HA_OCR_ENTITY", ""), "Home Assistant image_processing entity_id")
 	continuous := flag.Bool("continuous", false, "run continuously (respects SYNC_INTERVAL)")
 	intervalSec := flag.Int("interval", envInt("SYNC_INTERVAL", 300), "seconds between syncs in continuous mode")
+	registerPort := flag.String("register-port", env("REMARKABLE_REGISTER_PORT", "8421"), "port for the device registration web UI")
 	flag.Parse()
 
-	if *deviceToken == "" {
-		log.Fatal("REMARKABLE_DEVICE_TOKEN is required")
-	}
 	if *vaultPath == "" {
 		log.Fatal("VAULT_PATH is required")
+	}
+
+	// Ensure cache dir exists before we try to read/write the token file.
+	if err := os.MkdirAll(*cacheDir, 0o755); err != nil {
+		log.Fatalf("cannot create cache dir %s: %v", *cacheDir, err)
+	}
+
+	tokenFilePath := filepath.Join(*cacheDir, "device.token")
+
+	// Always start the registration web UI so users can (re-)register at any time.
+	regServer := register.New(tokenFilePath)
+	go func() {
+		addr := ":" + *registerPort
+		log.Printf("Registration UI listening on %s", addr)
+		if err := regServer.ListenAndServe(addr); err != nil {
+			log.Printf("registration server error: %v", err)
+		}
+	}()
+
+	// Resolve token: explicit flag/env takes priority, then saved file.
+	if *deviceToken == "" {
+		*deviceToken = register.ReadSavedToken(tokenFilePath)
+	}
+	if *deviceToken == "" {
+		log.Printf("No device token configured. Open http://<ha-host>:%s/ to register your reMarkable.", *registerPort)
+		// Block until a token is saved via the registration UI, then proceed.
+		for *deviceToken == "" {
+			time.Sleep(5 * time.Second)
+			*deviceToken = register.ReadSavedToken(tokenFilePath)
+		}
+		log.Println("Device token received — starting sync")
 	}
 
 	var ocrClient *ocr.Client
