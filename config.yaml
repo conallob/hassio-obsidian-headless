@@ -16,9 +16,11 @@ host_network: false
 
 ports:
   8420/tcp: 8420
+  8421/tcp: 8421
 
 ports_description:
   8420/tcp: MCP HTTP server (obsidian-vault-mcp, streamable-HTTP transport)
+  8421/tcp: reMarkable device registration UI (open in browser to pair your tablet)
 
 map:
   - type: share
@@ -63,6 +65,33 @@ options:
   tls_cert_path: "/ssl/fullchain.pem"
   tls_key_path: "/ssl/privkey.pem"
 
+  # --- reMarkable sync (opt-in) ---
+  enable_remarkable: false
+
+  # Device token from your reMarkable account.
+  # Obtain by running `rmapi` (https://github.com/ddvk/rmapi) on any machine,
+  # completing the one-time device registration, then copying the token from
+  # ~/.rmapi (the "devicetoken" field).
+  remarkable_device_token: ""
+
+  # Sub-folder within the Obsidian vault where reMarkable notes are written.
+  remarkable_output_dir: "reMarkable"
+
+  # How often to poll for new/updated documents (seconds).
+  remarkable_sync_interval: 300
+
+  # --- Home Assistant OCR (optional, for handwritten notebooks) ---
+  # Full URL to a HA webhook or REST endpoint that accepts
+  # {"image": "<base64-encoded PNG>"} and returns {"text": "..."}.
+  # Example: http://homeassistant.local:8123/api/webhook/remarkable-ocr
+  ha_ocr_url: ""
+
+  # Long-lived HA access token (not needed for unauthenticated webhooks).
+  ha_ocr_token: ""
+
+  # Optional: HA image_processing entity_id to pass in the OCR payload.
+  ha_ocr_entity: ""
+
 schema:
   obsidian_auth_token: str
   vault_name: str
@@ -75,3 +104,10 @@ schema:
   tailscale_auth_key: str?
   tls_cert_path: str?
   tls_key_path: str?
+  enable_remarkable: bool
+  remarkable_device_token: str?
+  remarkable_output_dir: str?
+  remarkable_sync_interval: int?
+  ha_ocr_url: str?
+  ha_ocr_token: str?
+  ha_ocr_entity: str?
