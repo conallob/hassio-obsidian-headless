@@ -1,0 +1,39 @@
+#!/usr/bin/with-contenv bashio
+# s6 service: remarkable-sync
+# Runs the Go remarkable-sync binary in continuous mode.
+# Skips silently when enable_remarkable is false.
+
+. /usr/local/bin/build-env.sh
+
+if ! bashio::config.true "enable_remarkable"; then
+    bashio::log.info "remarkable-sync disabled (set enable_remarkable: true to enable)"
+    exec sleep infinity
+fi
+
+REMARKABLE_DEVICE_TOKEN="$(bashio::config 'remarkable_device_token')"
+export REMARKABLE_DEVICE_TOKEN
+
+if [ -z "${REMARKABLE_DEVICE_TOKEN}" ]; then
+    bashio::log.fatal "remarkable_device_token is required when enable_remarkable is true."
+    bashio::log.fatal "Obtain a device token by running: rmapi (https://github.com/ddvk/rmapi)"
+    exit 1
+fi
+
+REMARKABLE_OUTPUT_DIR="$(bashio::config 'remarkable_output_dir')"
+export REMARKABLE_OUTPUT_DIR="${REMARKABLE_OUTPUT_DIR:-reMarkable}"
+
+if bashio::config.has_value "ha_ocr_url"; then
+    export HA_OCR_URL="$(bashio::config 'ha_ocr_url')"
+fi
+if bashio::config.has_value "ha_ocr_token"; then
+    export HA_OCR_TOKEN="$(bashio::config 'ha_ocr_token')"
+fi
+if bashio::config.has_value "ha_ocr_entity"; then
+    export HA_OCR_ENTITY="$(bashio::config 'ha_ocr_entity')"
+fi
+
+export SYNC_INTERVAL="$(bashio::config 'remarkable_sync_interval' 2>/dev/null || echo 300)"
+export VAULT_PATH="${VAULT_PATH:-/share/obsidian-vault}"
+
+bashio::log.info "Starting remarkable-sync (interval: ${SYNC_INTERVAL}s, output: ${VAULT_PATH}/${REMARKABLE_OUTPUT_DIR})"
+exec /usr/local/bin/remarkable-sync --continuous
