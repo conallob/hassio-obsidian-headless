@@ -36,6 +36,7 @@ import (
 	"strings"
 	"time"
 
+	"remarkable-sync/internal/obsidianauth"
 	"remarkable-sync/internal/ocr"
 	"remarkable-sync/internal/register"
 	"remarkable-sync/internal/rmcloud"
@@ -51,7 +52,8 @@ func main() {
 	haOCREntity := flag.String("ha-ocr-entity", env("HA_OCR_ENTITY", ""), "Home Assistant image_processing entity_id")
 	continuous := flag.Bool("continuous", false, "run continuously (respects SYNC_INTERVAL)")
 	intervalSec := flag.Int("interval", envInt("SYNC_INTERVAL", 300), "seconds between syncs in continuous mode")
-	registerPort := flag.String("register-port", env("REMARKABLE_REGISTER_PORT", "8421"), "port for the device registration web UI")
+	registerPort := flag.String("register-port", env("REMARKABLE_REGISTER_PORT", "8421"), "port for the reMarkable device registration web UI")
+	obsidianAuthPort := flag.String("obsidian-auth-port", env("OBSIDIAN_AUTH_PORT", "8422"), "port for the Obsidian token generator web UI")
 	flag.Parse()
 
 	if *vaultPath == "" {
@@ -65,13 +67,22 @@ func main() {
 
 	tokenFilePath := filepath.Join(*cacheDir, "device.token")
 
-	// Always start the registration web UI so users can (re-)register at any time.
+	// Always start the reMarkable registration web UI.
 	regServer := register.New(tokenFilePath)
 	go func() {
 		addr := ":" + *registerPort
-		log.Printf("Registration UI listening on %s", addr)
+		log.Printf("reMarkable registration UI listening on %s", addr)
 		if err := regServer.ListenAndServe(addr); err != nil {
-			log.Printf("registration server error: %v", err)
+			log.Printf("reMarkable registration server error: %v", err)
+		}
+	}()
+
+	// Always start the Obsidian token generator UI.
+	go func() {
+		addr := ":" + *obsidianAuthPort
+		log.Printf("Obsidian auth UI listening on %s", addr)
+		if err := obsidianauth.New().ListenAndServe(addr); err != nil {
+			log.Printf("Obsidian auth server error: %v", err)
 		}
 	}()
 

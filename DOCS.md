@@ -22,14 +22,23 @@ This add-on provides two services in a single container:
 
 ## Step 1: Get your Obsidian Auth Token
 
-Run the following on any machine with Node.js installed:
+The add-on includes a built-in token generator — no Node.js or CLI tools required.
 
+1. Start the add-on (it will start even without a token configured)
+2. Open **`http://<your-ha-ip>:8422/`** in your browser
+3. Enter your Obsidian account email and password (and 2FA code if enabled)
+4. Copy the token shown and paste it into `obsidian_auth_token` in the add-on config
+5. Restart the add-on
+
+> Your credentials go directly to `api.obsidian.md` via the add-on server and are
+> never stored or logged.
+
+**Alternative (CLI, requires Node 22):**
 ```bash
-npx obsidian-headless get-token
+npx obsidian-headless@0.0.9 get-token
 ```
-
-Follow the prompts (email, password, MFA if enabled). Copy the printed token —
-this is your `obsidian_auth_token`.
+Note: Node 26+ is not yet supported by this command due to a `better-sqlite3`
+compatibility issue. Use the browser UI above instead.
 
 ---
 
