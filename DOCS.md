@@ -23,8 +23,9 @@ This add-on provides two services in a single container:
 ## Step 1: Get your Obsidian Auth Token
 
 The add-on includes a built-in token generator — no Node.js or CLI tools required.
+It is available immediately after the add-on starts, even before any configuration.
 
-1. Start the add-on (it will start even without a token configured)
+1. Install and start the add-on (no config needed yet)
 2. Open **`http://<your-ha-ip>:8422/`** in your browser
 3. Enter your Obsidian account email and password (and 2FA code if enabled)
 4. Copy the token shown and paste it into `obsidian_auth_token` in the add-on config
