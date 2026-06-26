@@ -1,37 +1,42 @@
 #!/usr/bin/with-contenv bashio
 # s6 service: remarkable-sync
-# Runs the Go remarkable-sync binary in continuous mode.
-# Skips silently when enable_remarkable is false.
+# Always starts the binary so the Obsidian token generator (port 8422) and
+# reMarkable registration UI (port 8421) are available from first boot.
+# The sync loop only runs when enable_remarkable is true.
 
 . /usr/local/bin/build-env.sh
 
-if ! bashio::config.true "enable_remarkable"; then
-    bashio::log.info "remarkable-sync disabled (set enable_remarkable: true to enable)"
-    exec sleep infinity
+# Pass enable_remarkable into the binary so it can skip the sync loop.
+if bashio::config.true "enable_remarkable"; then
+    export REMARKABLE_SYNC_ENABLED="true"
+
+    REMARKABLE_DEVICE_TOKEN="$(bashio::config 'remarkable_device_token')"
+    export REMARKABLE_DEVICE_TOKEN
+
+    REMARKABLE_OUTPUT_DIR="$(bashio::config 'remarkable_output_dir')"
+    export REMARKABLE_OUTPUT_DIR="${REMARKABLE_OUTPUT_DIR:-reMarkable}"
+
+    if bashio::config.has_value "ha_ocr_url"; then
+        export HA_OCR_URL="$(bashio::config 'ha_ocr_url')"
+    fi
+    if bashio::config.has_value "ha_ocr_token"; then
+        export HA_OCR_TOKEN="$(bashio::config 'ha_ocr_token')"
+    fi
+    if bashio::config.has_value "ha_ocr_entity"; then
+        export HA_OCR_ENTITY="$(bashio::config 'ha_ocr_entity')"
+    fi
+
+    export SYNC_INTERVAL="$(bashio::config 'remarkable_sync_interval' 2>/dev/null || echo 300)"
+    bashio::log.info "reMarkable sync enabled (interval: ${SYNC_INTERVAL}s)"
+else
+    export REMARKABLE_SYNC_ENABLED="false"
+    bashio::log.info "reMarkable sync disabled — web UIs still available"
 fi
 
-REMARKABLE_DEVICE_TOKEN="$(bashio::config 'remarkable_device_token')"
-export REMARKABLE_DEVICE_TOKEN
-# Token may also be saved by the registration UI at /data/remarkable-sync/device.token.
-# The binary falls back to that file automatically; no fatal here.
-
-REMARKABLE_OUTPUT_DIR="$(bashio::config 'remarkable_output_dir')"
-export REMARKABLE_OUTPUT_DIR="${REMARKABLE_OUTPUT_DIR:-reMarkable}"
-
-if bashio::config.has_value "ha_ocr_url"; then
-    export HA_OCR_URL="$(bashio::config 'ha_ocr_url')"
-fi
-if bashio::config.has_value "ha_ocr_token"; then
-    export HA_OCR_TOKEN="$(bashio::config 'ha_ocr_token')"
-fi
-if bashio::config.has_value "ha_ocr_entity"; then
-    export HA_OCR_ENTITY="$(bashio::config 'ha_ocr_entity')"
-fi
-
-export SYNC_INTERVAL="$(bashio::config 'remarkable_sync_interval' 2>/dev/null || echo 300)"
 export VAULT_PATH="${VAULT_PATH:-/share/obsidian-vault}"
 export REMARKABLE_REGISTER_PORT="8421"
+export OBSIDIAN_AUTH_PORT="8422"
 
-bashio::log.info "Starting remarkable-sync (interval: ${SYNC_INTERVAL}s, output: ${VAULT_PATH}/${REMARKABLE_OUTPUT_DIR})"
-bashio::log.info "Registration UI available at http://<ha-host>:8421/"
-exec /usr/local/bin/remarkable-sync --continuous
+bashio::log.info "Obsidian token generator: http://<ha-host>:8422/"
+bashio::log.info "reMarkable registration:   http://<ha-host>:8421/"
+exec /usr/local/bin/remarkable-sync

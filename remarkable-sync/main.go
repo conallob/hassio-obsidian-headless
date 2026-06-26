@@ -50,7 +50,7 @@ func main() {
 	haOCRURL := flag.String("ha-ocr-url", env("HA_OCR_URL", ""), "Home Assistant OCR endpoint URL (optional)")
 	haOCRToken := flag.String("ha-ocr-token", env("HA_OCR_TOKEN", ""), "Home Assistant long-lived access token")
 	haOCREntity := flag.String("ha-ocr-entity", env("HA_OCR_ENTITY", ""), "Home Assistant image_processing entity_id")
-	continuous := flag.Bool("continuous", false, "run continuously (respects SYNC_INTERVAL)")
+	continuous := flag.Bool("continuous", env("REMARKABLE_SYNC_ENABLED", "false") == "true", "run continuously (respects SYNC_INTERVAL)")
 	intervalSec := flag.Int("interval", envInt("SYNC_INTERVAL", 300), "seconds between syncs in continuous mode")
 	registerPort := flag.String("register-port", env("REMARKABLE_REGISTER_PORT", "8421"), "port for the reMarkable device registration web UI")
 	obsidianAuthPort := flag.String("obsidian-auth-port", env("OBSIDIAN_AUTH_PORT", "8422"), "port for the Obsidian token generator web UI")
@@ -86,12 +86,20 @@ func main() {
 		}
 	}()
 
+	// If reMarkable sync is disabled, keep the web UIs running but skip the sync loop.
+	if env("REMARKABLE_SYNC_ENABLED", "true") == "false" {
+		log.Println("reMarkable sync disabled — web UIs running, sync loop skipped")
+		log.Printf("  Obsidian token generator: http://<ha-host>:%s/", *obsidianAuthPort)
+		log.Printf("  reMarkable registration:  http://<ha-host>:%s/", *registerPort)
+		select {} // block forever; s6 supervises the process
+	}
+
 	// Resolve token: explicit flag/env takes priority, then saved file.
 	if *deviceToken == "" {
 		*deviceToken = register.ReadSavedToken(tokenFilePath)
 	}
 	if *deviceToken == "" {
-		log.Printf("No device token configured. Open http://<ha-host>:%s/ to register your reMarkable.", *registerPort)
+		log.Printf("No reMarkable device token configured. Open http://<ha-host>:%s/ to register.", *registerPort)
 		// Block until a token is saved via the registration UI, then proceed.
 		for *deviceToken == "" {
 			time.Sleep(5 * time.Second)
