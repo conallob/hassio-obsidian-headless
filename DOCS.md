@@ -119,7 +119,7 @@ The add-on always serves a registration UI at **`http://<your-ha-ip>:8421/`**.
 **To get your pairing code:**
 - Go to `https://my.remarkable.com/device/desktop/new`
 - Click the **Tablet** tab
-- Copy the 8-character lowercase code shown (e.g. `teyubbmc`) — it expires in ~5 minutes
+- Copy the 8-character lowercase code shown (e.g. `xxxxxxxx`) — it expires in ~5 minutes
 
 If no token is configured, the add-on will wait at the registration UI until
 one is provided — no crash or restart loop.

@@ -115,7 +115,7 @@ var indexTmpl = template.Must(template.New("index").Parse(`<!DOCTYPE html>
       my.remarkable.com/device/desktop/new ↗
     </a>,
     then click the <strong>Tablet</strong> tab. reMarkable will display an
-    8-character code (e.g. <code>teyubbmc</code>) valid for ~5 minutes.<br>
+    8-character code (e.g. <code>xxxxxxxx</code>) valid for ~5 minutes.<br>
     <span style="color:#666;font-size:.9rem">
       The code is lowercase — enter it exactly as shown.
     </span>
@@ -129,7 +129,7 @@ var indexTmpl = template.Must(template.New("index").Parse(`<!DOCTYPE html>
     <form method="POST" action="/register" style="margin-top:.6rem">
       <label for="code">One-time code</label>
       <input id="code" name="code" type="text" maxlength="8" autocomplete="off"
-             placeholder="bufjmbgl" required>
+             placeholder="xxxxxxxx" required>
       <br>
       <button type="submit">Register device</button>
     </form>
