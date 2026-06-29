@@ -9,10 +9,10 @@
 . /usr/local/bin/build-env.sh
 
 if [ -z "${OBSIDIAN_AUTH_TOKEN}" ]; then
-    bashio::log.fatal "No Obsidian auth token found."
-    bashio::log.fatal "Open http://<ha-host>:8422/ in a browser and sign in — the token"
-    bashio::log.fatal "is saved automatically and the add-on will pick it up on restart."
-    bashio::log.fatal "Alternatively, set obsidian_auth_token in the add-on configuration."
+    bashio::log.fatal "obsidian_auth_token is not set."
+    bashio::log.fatal "Get your token by opening http://<ha-host>:8422/ in a browser,"
+    bashio::log.fatal "or run: npx obsidian-headless get-token"
+    bashio::log.fatal "Then paste the token into the add-on configuration and restart."
     exec sleep inf
 fi
 

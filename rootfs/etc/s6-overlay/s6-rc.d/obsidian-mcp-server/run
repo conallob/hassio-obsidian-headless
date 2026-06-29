@@ -17,14 +17,14 @@ bashio::log.info "Starting Obsidian MCP server (tunnel: ${TUNNEL_MODE})"
 # At least one credential must be provided.
 if [ -z "${VAULT_MCP_TOKEN}" ] && [ -z "${VAULT_OAUTH_CLIENT_SECRET}" ]; then
     bashio::log.fatal "Set mcp_auth_token (bearer) and/or oauth_client_secret in add-on options."
-    exit 1
+    exec sleep inf
 fi
 
 # --- Tailscale setup ---
 if [ "${TUNNEL_MODE}" = "tailscale" ]; then
     if [ -z "${TAILSCALE_AUTH_KEY}" ]; then
         bashio::log.fatal "tailscale_auth_key is required when tunnel_mode is 'tailscale'."
-        exit 1
+        exec sleep inf
     fi
 
     bashio::log.info "Configuring Tailscale..."
@@ -53,7 +53,7 @@ fi
 if [ "${TUNNEL_MODE}" = "https" ]; then
     if [ ! -f "${TLS_CERT_PATH}" ] || [ ! -f "${TLS_KEY_PATH}" ]; then
         bashio::log.fatal "TLS cert/key not found at ${TLS_CERT_PATH} / ${TLS_KEY_PATH}."
-        exit 1
+        exec sleep inf
     fi
     bashio::log.info "TLS mode: proxy your reverse-proxy to http://localhost:${VAULT_MCP_PORT}"
 fi
