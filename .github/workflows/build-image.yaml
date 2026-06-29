@@ -13,7 +13,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  OBSIDIAN_HEADLESS_VERSION: "0.0.9"
+  OBSIDIAN_HEADLESS_VERSION: "0.0.12"
 
 jobs:
   build:
@@ -68,6 +68,7 @@ jobs:
             --build-arg BUILD_FROM=${{ matrix.build_from }} \
             --build-arg BUILD_ARCH=${{ matrix.build_arch }} \
             --build-arg BUILD_VERSION=${{ steps.version.outputs.version }} \
+            --build-arg OBSIDIAN_HEADLESS_VERSION=${{ env.OBSIDIAN_HEADLESS_VERSION }} \
             --manifest ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:build-${{ matrix.build_arch }} \
             .
 

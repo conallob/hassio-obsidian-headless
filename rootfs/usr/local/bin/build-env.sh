@@ -46,3 +46,13 @@ export TUNNEL_MODE="$(_opt tunnel_mode)"
 export TAILSCALE_AUTH_KEY="$(_opt tailscale_auth_key)"
 export TLS_CERT_PATH="$(_opt tls_cert_path)"
 export TLS_KEY_PATH="$(_opt tls_key_path)"
+
+# --- reMarkable sync ---
+export ENABLE_REMARKABLE="$(_opt enable_remarkable)"
+export REMARKABLE_ONE_TIME_CODE="$(_opt remarkable_one_time_code)"
+export REMARKABLE_RM_FOLDER="$(_opt remarkable_rm_folder)"
+export REMARKABLE_OBSIDIAN_FOLDER="$(_opt remarkable_obsidian_folder)"
+export REMARKABLE_SYNC_INTERVAL="$(_opt remarkable_sync_interval)"
+export REMARKABLE_BIDIRECTIONAL="$(_opt remarkable_bidirectional)"
+# rmapi reads its config (auth tokens) from this directory
+export RMAPI_CONFIG="/data/rmapi"

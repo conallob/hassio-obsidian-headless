@@ -1,13 +1,19 @@
 # BUILD_FROM must be declared before any FROM to be usable in a FROM instruction.
 ARG BUILD_FROM
 
-# Stage 1: build the remarkable-sync Go binary.
+# Stage 1: build Go binaries (remarkable-sync + rmapi).
 # golang:1.22-bookworm is multi-arch so this stage works on both amd64 and aarch64 runners.
 FROM golang:1.22-bookworm AS go-builder
 
-WORKDIR /build
+# Build the remarkable-sync daemon
+WORKDIR /build/remarkable-sync
 COPY remarkable-sync/ .
 RUN CGO_ENABLED=0 GOFLAGS=-mod=mod go build -trimpath -ldflags="-s -w" -o /remarkable-sync .
+
+# Build rmapi from source — no pre-built arm64 binary available in upstream releases
+WORKDIR /build/rmapi
+RUN git clone --depth 1 https://github.com/juruen/rmapi.git . && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /rmapi .
 
 
 # Stage 2: install obsidian-vault-mcp into a prefix we can copy across.
@@ -52,13 +58,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 # Install obsidian-headless (official Obsidian Sync CLI, requires ob binary)
+ARG OBSIDIAN_HEADLESS_VERSION=0.0.12
 RUN npm install -g obsidian-headless@"${OBSIDIAN_HEADLESS_VERSION}"
 
 # Copy the installed obsidian-vault-mcp package + its deps from the builder
 COPY --from=mcp-builder /install /usr/local
 
-# Copy the remarkable-sync binary from the Go builder
+# Copy Go binaries from the builder
 COPY --from=go-builder /remarkable-sync /usr/local/bin/remarkable-sync
+COPY --from=go-builder /rmapi /usr/local/bin/rmapi
 
 # Copy s6 service definitions and helper scripts
 COPY rootfs /
