@@ -103,31 +103,57 @@ In Claude.ai → Settings → Integrations → Add MCP Server:
 
 ## Optional: reMarkable Cloud Sync
 
-Set `enable_remarkable: true` to sync documents between your reMarkable tablet
-and your Obsidian vault.
+Set `enable_remarkable: true` to sync your reMarkable documents into your
+Obsidian vault. This is a **one-way sync**: reMarkable → Obsidian.
 
-### Setup
+### Step 1: Register your device
 
-1. Go to **`https://my.remarkable.com/device/desktop/new`** and follow the
-   registration flow to get a device token
-2. Paste the token into `remarkable_device_token` in the add-on configuration
-3. The add-on registers the device on first start; the token is cached in
-   `/data/rmapi/` and reused across restarts
+The add-on always serves a registration UI at **`http://<your-ha-ip>:8421/`**.
 
-Or use the registration UI served by the add-on at **`http://<your-ha-ip>:8421/`**.
+1. Open that URL in your browser
+2. Follow the prompts — you'll be redirected to `my.remarkable.com` to authorise
+3. The device token is saved to `/data/remarkable-sync/device.token` and reused
+   across restarts
 
-### Sync behaviour
+Alternatively, paste a token directly into `remarkable_device_token` in the
+add-on configuration (obtain one from `https://my.remarkable.com/device/desktop/new`).
 
-- **reMarkable → Obsidian**: all documents download as PDFs into
-  `<vault>/reMarkable/` on the configured interval (default: 300 seconds)
-- **Obsidian → reMarkable**: PDFs placed in `<vault>/reMarkable/Upload/` are
-  uploaded to your tablet and moved to `<vault>/reMarkable/Uploaded/`
+If no token is configured, the add-on will wait at the registration UI until
+one is provided — no crash or restart loop.
 
-### On-demand sync
+### What gets synced
 
-Create the file `/data/.remarkable-sync-now` to trigger an immediate sync
-without waiting for the next interval. In Home Assistant this can be wired
-to an automation or script using a shell command.
+For each document on your reMarkable the sync engine creates:
+
+- **`<vault>/reMarkable/<folder>/<Document Name>.md`** — a Markdown note with
+  YAML front-matter (title, modified date, page count, tags, reMarkable ID)
+  and a metadata table
+- **`<vault>/reMarkable/<folder>/<Document Name>.pdf`** — the embedded PDF
+  (for uploaded PDFs and annotated documents)
+- **`<vault>/reMarkable/index.md`** — an index of all documents, updated on
+  every sync
+
+The full folder hierarchy from your reMarkable is preserved. Only documents
+whose cloud version has changed are re-downloaded (cached in `/data/remarkable-sync/`).
+
+### Sync interval
+
+Documents are checked every `remarkable_sync_interval` seconds (default: 300).
+The vault sub-directory can be changed with `remarkable_output_dir` (default: `reMarkable`).
+
+### Optional: OCR for handwritten notebooks
+
+Handwritten notebooks are synced as stub notes by default. To transcribe them,
+point the add-on at a Home Assistant OCR endpoint:
+
+| Option | Description |
+|---|---|
+| `ha_ocr_url` | Full URL to a HA webhook or REST endpoint that accepts `{"image": "<base64 PNG>"}` and returns `{"text": "..."}` |
+| `ha_ocr_token` | Long-lived HA access token (not needed for unauthenticated webhooks) |
+| `ha_ocr_entity` | Optional `image_processing` entity ID to include in the OCR payload |
+
+Transcribed text appears under a `## Content (OCR)` section in the note,
+with pages separated by `---`.
 
 ---
 
