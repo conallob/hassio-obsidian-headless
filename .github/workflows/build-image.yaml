@@ -6,9 +6,21 @@ on:
       - main
     tags:
       - "v*"
+    paths:
+      - "Dockerfile"
+      - "config.yaml"
+      - "rootfs/**"
+      - "remarkable-sync/**"
+      - ".github/workflows/build-image.yaml"
   pull_request:
     branches:
       - main
+    paths:
+      - "Dockerfile"
+      - "config.yaml"
+      - "rootfs/**"
+      - "remarkable-sync/**"
+      - ".github/workflows/build-image.yaml"
 
 env:
   REGISTRY: ghcr.io
