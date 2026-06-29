@@ -2,7 +2,6 @@
 
 [![Build Status](https://github.com/conallob/hassio-obsidian-headless/actions/workflows/build-image.yaml/badge.svg)](https://github.com/conallob/hassio-obsidian-headless/actions/workflows/build-image.yaml)
 [![GitHub release](https://img.shields.io/github/v/release/conallob/hassio-obsidian-headless)](https://github.com/conallob/hassio-obsidian-headless/releases)
-[![Go Report Card](https://goreportcard.com/badge/github.com/conallob/hassio-obsidian-headless/remarkable-sync)](https://goreportcard.com/report/github.com/conallob/hassio-obsidian-headless/remarkable-sync)
 [![codecov](https://codecov.io/gh/conallob/hassio-obsidian-headless/branch/main/graph/badge.svg)](https://codecov.io/gh/conallob/hassio-obsidian-headless)
 [![License: MIT](https://img.shields.io/github/license/conallob/hassio-obsidian-headless)](LICENSE)
 [![ghcr.io](https://img.shields.io/badge/ghcr.io-conallob%2Fhassio--obsidian--headless-blue?logo=github)](https://github.com/conallob/hassio-obsidian-headless/pkgs/container/hassio-obsidian-headless)
