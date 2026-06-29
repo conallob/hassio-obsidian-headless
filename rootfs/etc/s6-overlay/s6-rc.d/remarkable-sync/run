@@ -1,59 +1,42 @@
 #!/usr/bin/with-contenv bashio
 # s6 service: remarkable-sync
-# Syncs documents between reMarkable Cloud and the Obsidian vault.
-# Runs a timed loop; also watches /data/.remarkable-sync-now for on-demand triggers.
+# Always starts the binary so the Obsidian token generator (port 8422) and
+# reMarkable registration UI (port 8421) are available from first boot.
+# The sync loop only runs when enable_remarkable is true.
 
 . /usr/local/bin/build-env.sh
 
-if [ "${ENABLE_REMARKABLE}" != "true" ]; then
-    bashio::log.info "reMarkable sync disabled (enable_remarkable: false). Idling."
-    exec sleep inf
+# Pass enable_remarkable into the binary so it can skip the sync loop.
+if bashio::config.true "enable_remarkable"; then
+    export REMARKABLE_SYNC_ENABLED="true"
+
+    REMARKABLE_DEVICE_TOKEN="$(bashio::config 'remarkable_device_token')"
+    export REMARKABLE_DEVICE_TOKEN
+
+    REMARKABLE_OUTPUT_DIR="$(bashio::config 'remarkable_output_dir')"
+    export REMARKABLE_OUTPUT_DIR="${REMARKABLE_OUTPUT_DIR:-reMarkable}"
+
+    if bashio::config.has_value "ha_ocr_url"; then
+        export HA_OCR_URL="$(bashio::config 'ha_ocr_url')"
+    fi
+    if bashio::config.has_value "ha_ocr_token"; then
+        export HA_OCR_TOKEN="$(bashio::config 'ha_ocr_token')"
+    fi
+    if bashio::config.has_value "ha_ocr_entity"; then
+        export HA_OCR_ENTITY="$(bashio::config 'ha_ocr_entity')"
+    fi
+
+    export SYNC_INTERVAL="$(bashio::config 'remarkable_sync_interval' 2>/dev/null || echo 300)"
+    bashio::log.info "reMarkable sync enabled (interval: ${SYNC_INTERVAL}s)"
+else
+    export REMARKABLE_SYNC_ENABLED="false"
+    bashio::log.info "reMarkable sync disabled — web UIs still available"
 fi
 
-mkdir -p "${RMAPI_CONFIG}"
+export VAULT_PATH="${VAULT_PATH:-/share/obsidian-vault}"
+export REMARKABLE_REGISTER_PORT="8421"
+export OBSIDIAN_AUTH_PORT="8422"
 
-# --- First-run: register device with reMarkable Cloud ---
-# rmapi prompts for a one-time code on stdin when no auth file exists.
-# The code is obtained from https://my.remarkable.com/device/desktop/new
-AUTH_FILE="${RMAPI_CONFIG}/auth0.json"
-if [ ! -f "${AUTH_FILE}" ]; then
-    if [ -z "${REMARKABLE_ONE_TIME_CODE}" ]; then
-        bashio::log.fatal "No reMarkable auth found. Set remarkable_one_time_code to the"
-        bashio::log.fatal "one-time code from https://my.remarkable.com/device/desktop/new"
-        exit 1
-    fi
-
-    bashio::log.info "First run: registering with reMarkable Cloud..."
-    if ! echo "${REMARKABLE_ONE_TIME_CODE}" | rmapi version >/dev/null 2>&1; then
-        # rmapi version triggers auth flow on first run
-        echo "${REMARKABLE_ONE_TIME_CODE}" | rmapi ls / >/dev/null 2>&1 || true
-    fi
-
-    if [ ! -f "${AUTH_FILE}" ]; then
-        bashio::log.fatal "reMarkable registration failed. Check your one-time code and try again."
-        exit 1
-    fi
-    bashio::log.info "reMarkable device registered successfully."
-fi
-
-SYNC_INTERVAL="${REMARKABLE_SYNC_INTERVAL:-60}"
-bashio::log.info "reMarkable sync started (interval: ${SYNC_INTERVAL} min, bidirectional: ${REMARKABLE_BIDIRECTIONAL:-true})"
-
-# --- Main loop ---
-while true; do
-    /usr/local/bin/remarkable-sync.sh
-    bashio::log.info "reMarkable sync complete. Next run in ${SYNC_INTERVAL} min (or touch /data/.remarkable-sync-now)."
-
-    # Wait for interval, waking every 30s to check for on-demand trigger
-    ELAPSED=0
-    WAIT_SECS=$(( SYNC_INTERVAL * 60 ))
-    while [ "${ELAPSED}" -lt "${WAIT_SECS}" ]; do
-        if [ -f "/data/.remarkable-sync-now" ]; then
-            bashio::log.info "On-demand sync triggered via /data/.remarkable-sync-now"
-            rm -f "/data/.remarkable-sync-now"
-            break
-        fi
-        sleep 30
-        ELAPSED=$(( ELAPSED + 30 ))
-    done
-done
+bashio::log.info "Obsidian token generator: http://<ha-host>:8422/"
+bashio::log.info "reMarkable registration:   http://<ha-host>:8421/"
+exec /usr/local/bin/remarkable-sync

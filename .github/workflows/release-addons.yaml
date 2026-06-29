@@ -1,0 +1,75 @@
+name: Publish to Add-ons Repository
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    name: Update hassio-addons repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout source add-on repo
+        uses: actions/checkout@v4
+
+      - name: Resolve version from tag
+        id: version
+        run: |
+          TAG="${{ github.ref_name }}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout hassio-addons repository
+        uses: actions/checkout@v4
+        with:
+          repository: conallob/hassio-addons
+          token: ${{ secrets.HASSIO_ADDONS_PAT }}
+          path: hassio-addons
+
+      - name: Ensure repository.yaml exists
+        working-directory: hassio-addons
+        run: |
+          if [[ ! -f repository.yaml ]]; then
+            cat > repository.yaml <<'EOF'
+          name: Conall's Home Assistant Add-ons
+          url: https://github.com/conallob/hassio-addons
+          maintainer: Conall O'Brien <conall@gmail.com>
+          EOF
+          fi
+
+      - name: Sync add-on config
+        working-directory: hassio-addons
+        run: |
+          SLUG="obsidian_headless"
+          mkdir -p "${SLUG}"
+          # Copy manifest from source repo, pinning the version to the release tag
+          cp "$GITHUB_WORKSPACE/config.yaml" "${SLUG}/config.yaml"
+          # Stamp the exact released version
+          sed -i "s/^version:.*/version: \"${{ steps.version.outputs.version }}\"/" "${SLUG}/config.yaml"
+
+      - name: Copy docs and icon if present
+        working-directory: hassio-addons
+        run: |
+          SLUG="obsidian_headless"
+          for f in DOCS.md icon.png logo.png; do
+            if [[ -f "$GITHUB_WORKSPACE/${f}" ]]; then
+              cp "$GITHUB_WORKSPACE/${f}" "${SLUG}/${f}"
+            fi
+          done
+
+      - name: Commit and push
+        working-directory: hassio-addons
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git diff --cached --quiet; then
+            echo "Nothing to commit — add-on repo already up to date."
+          else
+            git commit -m "chore: release obsidian_headless ${{ steps.version.outputs.tag }}"
+            git push origin HEAD
+          fi

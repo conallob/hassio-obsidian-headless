@@ -2,7 +2,16 @@
 ARG BUILD_FROM
 ARG RMAPI_VERSION=0.0.25
 
-# Stage 1: install obsidian-vault-mcp into a prefix we can copy across.
+# Stage 1: build the remarkable-sync Go binary.
+# golang:1.22-bookworm is multi-arch so this stage works on both amd64 and aarch64 runners.
+FROM golang:1.22-bookworm AS go-builder
+
+WORKDIR /build
+COPY remarkable-sync/ .
+RUN CGO_ENABLED=0 GOFLAGS=-mod=mod go build -trimpath -ldflags="-s -w" -o /remarkable-sync .
+
+
+# Stage 2: install obsidian-vault-mcp into a prefix we can copy across.
 FROM python:3.12-slim AS mcp-builder
 
 WORKDIR /build
@@ -58,6 +67,9 @@ RUN ARCH=$(dpkg --print-architecture) && \
 # Copy the installed obsidian-vault-mcp package + its deps from the builder
 COPY --from=mcp-builder /install /usr/local
 
+# Copy the remarkable-sync binary from the Go builder
+COPY --from=go-builder /remarkable-sync /usr/local/bin/remarkable-sync
+
 # Copy s6 service definitions and helper scripts
 COPY rootfs /
 
@@ -66,6 +78,6 @@ RUN chmod +x \
     /etc/s6-overlay/s6-rc.d/obsidian-mcp-server/run \
     /etc/s6-overlay/s6-rc.d/remarkable-sync/run \
     /usr/local/bin/build-env.sh \
-    /usr/local/bin/remarkable-sync.sh
+    /usr/local/bin/remarkable-sync
 
 EXPOSE 8420
