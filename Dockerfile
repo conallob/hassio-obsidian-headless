@@ -1,14 +1,19 @@
 # BUILD_FROM must be declared before any FROM to be usable in a FROM instruction.
 ARG BUILD_FROM
-ARG RMAPI_VERSION=0.0.25
 
-# Stage 1: build the remarkable-sync Go binary.
+# Stage 1: build Go binaries (remarkable-sync + rmapi).
 # golang:1.22-bookworm is multi-arch so this stage works on both amd64 and aarch64 runners.
 FROM golang:1.22-bookworm AS go-builder
 
-WORKDIR /build
+# Build the remarkable-sync daemon
+WORKDIR /build/remarkable-sync
 COPY remarkable-sync/ .
 RUN CGO_ENABLED=0 GOFLAGS=-mod=mod go build -trimpath -ldflags="-s -w" -o /remarkable-sync .
+
+# Build rmapi from source — no pre-built arm64 binary available in upstream releases
+WORKDIR /build/rmapi
+RUN git clone --depth 1 https://github.com/juruen/rmapi.git . && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /rmapi .
 
 
 # Stage 2: install obsidian-vault-mcp into a prefix we can copy across.
@@ -31,7 +36,6 @@ FROM ${BUILD_FROM}
 
 ARG BUILD_ARCH
 ARG BUILD_VERSION=dev
-ARG RMAPI_VERSION=0.0.25
 LABEL \
   io.hass.name="Obsidian Headless" \
   io.hass.description="Obsidian Sync headless daemon + optional remote MCP server" \
@@ -57,18 +61,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ARG OBSIDIAN_HEADLESS_VERSION=0.0.12
 RUN npm install -g obsidian-headless@"${OBSIDIAN_HEADLESS_VERSION}"
 
-# Install rmapi (reMarkable Cloud CLI) — single static binary, arch-aware
-RUN ARCH=$(dpkg --print-architecture) && \
-    curl -fsSL \
-      "https://github.com/juruen/rmapi/releases/download/v${RMAPI_VERSION}/rmapi-linux-${ARCH}" \
-      -o /usr/local/bin/rmapi && \
-    chmod +x /usr/local/bin/rmapi
-
 # Copy the installed obsidian-vault-mcp package + its deps from the builder
 COPY --from=mcp-builder /install /usr/local
 
-# Copy the remarkable-sync binary from the Go builder
+# Copy Go binaries from the builder
 COPY --from=go-builder /remarkable-sync /usr/local/bin/remarkable-sync
+COPY --from=go-builder /rmapi /usr/local/bin/rmapi
 
 # Copy s6 service definitions and helper scripts
 COPY rootfs /

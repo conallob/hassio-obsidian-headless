@@ -14,7 +14,6 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   OBSIDIAN_HEADLESS_VERSION: "0.0.12"
-  RMAPI_VERSION: "0.0.25"
 
 jobs:
   build:
@@ -70,7 +69,6 @@ jobs:
             --build-arg BUILD_ARCH=${{ matrix.build_arch }} \
             --build-arg BUILD_VERSION=${{ steps.version.outputs.version }} \
             --build-arg OBSIDIAN_HEADLESS_VERSION=${{ env.OBSIDIAN_HEADLESS_VERSION }} \
-            --build-arg RMAPI_VERSION=${{ env.RMAPI_VERSION }} \
             --manifest ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:build-${{ matrix.build_arch }} \
             .
 
