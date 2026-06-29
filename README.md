@@ -2,7 +2,6 @@
 
 [![Build Status](https://github.com/conallob/hassio-obsidian-headless/actions/workflows/build-image.yaml/badge.svg)](https://github.com/conallob/hassio-obsidian-headless/actions/workflows/build-image.yaml)
 [![GitHub release](https://img.shields.io/github/v/release/conallob/hassio-obsidian-headless)](https://github.com/conallob/hassio-obsidian-headless/releases)
-[![codecov](https://codecov.io/gh/conallob/hassio-obsidian-headless/branch/main/graph/badge.svg)](https://codecov.io/gh/conallob/hassio-obsidian-headless)
 [![License: MIT](https://img.shields.io/github/license/conallob/hassio-obsidian-headless)](LICENSE)
 [![ghcr.io](https://img.shields.io/badge/ghcr.io-conallob%2Fhassio--obsidian--headless-blue?logo=github)](https://github.com/conallob/hassio-obsidian-headless/pkgs/container/hassio-obsidian-headless)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-conallob-FFDD00?logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/conallob)
