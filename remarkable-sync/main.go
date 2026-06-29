@@ -78,10 +78,12 @@ func main() {
 	}()
 
 	// Always start the Obsidian token generator UI.
+	// Token is saved to /data/obsidian.token so obsidian-sync picks it up on restart.
+	obsidianTokenPath := "/data/obsidian.token"
 	go func() {
 		addr := ":" + *obsidianAuthPort
 		log.Printf("Obsidian auth UI listening on %s", addr)
-		if err := obsidianauth.New().ListenAndServe(addr); err != nil {
+		if err := obsidianauth.New(obsidianTokenPath).ListenAndServe(addr); err != nil {
 			log.Printf("Obsidian auth server error: %v", err)
 		}
 	}()

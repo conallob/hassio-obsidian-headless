@@ -95,21 +95,21 @@ options:
   ha_ocr_entity: ""
 
 schema:
-  obsidian_auth_token: str
+  obsidian_auth_token: str?
   vault_name: str
-  vault_password: str?
+  vault_password: password?
   enable_mcp: bool
-  mcp_auth_token: str?
+  mcp_auth_token: password?
   oauth_client_id: str?
-  oauth_client_secret: str?
+  oauth_client_secret: password?
   tunnel_mode: "list(none|tailscale|https)"
-  tailscale_auth_key: str?
+  tailscale_auth_key: password?
   tls_cert_path: str?
   tls_key_path: str?
   enable_remarkable: bool
-  remarkable_device_token: str?
+  remarkable_device_token: password?
   remarkable_output_dir: str?
   remarkable_sync_interval: int?
   ha_ocr_url: str?
-  ha_ocr_token: str?
+  ha_ocr_token: password?
   ha_ocr_entity: str?

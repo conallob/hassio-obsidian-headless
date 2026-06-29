@@ -9,14 +9,16 @@
 . /usr/local/bin/build-env.sh
 
 if [ -z "${OBSIDIAN_AUTH_TOKEN}" ]; then
-    bashio::log.fatal "obsidian_auth_token is required. Find it in the Obsidian desktop app:"
-    bashio::log.fatal "  Settings → General → Account → your API token"
-    exit 1
+    bashio::log.fatal "No Obsidian auth token found."
+    bashio::log.fatal "Open http://<ha-host>:8422/ in a browser and sign in — the token"
+    bashio::log.fatal "is saved automatically and the add-on will pick it up on restart."
+    bashio::log.fatal "Alternatively, set obsidian_auth_token in the add-on configuration."
+    exec sleep inf
 fi
 
 if [ -z "${VAULT_NAME}" ]; then
-    bashio::log.fatal "vault_name is required."
-    exit 1
+    bashio::log.fatal "vault_name is required. Set it in the add-on configuration and restart."
+    exec sleep inf
 fi
 
 mkdir -p "${VAULT_PATH}"

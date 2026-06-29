@@ -13,6 +13,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -21,12 +23,15 @@ const obsidianAPIBase = "https://api.obsidian.md"
 
 // Server is the Obsidian token-generation HTTP server.
 type Server struct {
-	mux *http.ServeMux
+	tokenPath string
+	mux       *http.ServeMux
 }
 
-// New creates a Server.
-func New() *Server {
-	s := &Server{mux: http.NewServeMux()}
+// New creates a Server. If tokenPath is non-empty, the token is also saved
+// there after a successful sign-in so obsidian-sync can load it on restart
+// without requiring the user to paste it into the add-on config.
+func New(tokenPath string) *Server {
+	s := &Server{tokenPath: tokenPath, mux: http.NewServeMux()}
 	s.mux.HandleFunc("/", s.handleIndex)
 	s.mux.HandleFunc("/signin", s.handleSignin)
 	return s
@@ -134,10 +139,13 @@ form.addEventListener('submit', async (e) => {
       result.innerHTML = '<div class="err">⚠️ Two-factor authentication required. Enter your 6-digit code above and try again.</div>';
       document.getElementById('mfa').focus();
     } else if (data.token) {
-      result.innerHTML = ` + "`" + `<div class="ok">✓ Token generated successfully. Copy it into the add-on configuration as <strong>obsidian_auth_token</strong>.</div>
+      const savedMsg = data.saved
+        ? '<p style="color:#065f46;font-size:.85rem;margin:.5rem 0 0">Token saved automatically — restart the add-on and it will be used without any config change.</p>'
+        : '<p style="color:#666;font-size:.85rem;margin:.5rem 0 0">Paste this token into <strong>obsidian_auth_token</strong> in the add-on configuration.</p>';
+      result.innerHTML = ` + "`" + `<div class="ok">✓ Token generated successfully.</div>
 <p style="margin:.5rem 0 .2rem;font-weight:500">Your auth token:</p>
 <div class="token-box" id="token-text">${data.token}</div>
-<button type="button" onclick="navigator.clipboard.writeText(document.getElementById('token-text').textContent).then(()=>this.textContent='Copied!')" style="background:#059669;margin-top:.5rem">Copy to clipboard</button>` + "`" + `;
+<button type="button" onclick="navigator.clipboard.writeText(document.getElementById('token-text').textContent).then(()=>this.textContent='Copied!')" style="background:#059669;margin-top:.5rem">Copy to clipboard</button>${savedMsg}` + "`" + `;
     } else {
       result.innerHTML = '<div class="err">❌ ' + (data.error || 'Sign-in failed. Check your email and password.') + '</div>';
     }
@@ -162,6 +170,7 @@ type signinRequest struct {
 type signinResponse struct {
 	Token    string `json:"token,omitempty"`
 	NeedsMFA bool   `json:"needs_mfa,omitempty"`
+	Saved    bool   `json:"saved,omitempty"`
 	Error    string `json:"error,omitempty"`
 }
 
@@ -201,7 +210,16 @@ func (s *Server) handleSignin(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, signinResponse{NeedsMFA: true})
 		return
 	}
-	writeJSON(w, http.StatusOK, signinResponse{Token: token})
+	saved := false
+	if s.tokenPath != "" {
+		if err := saveObsidianToken(s.tokenPath, token); err != nil {
+			log.Printf("could not save Obsidian token to %s: %v", s.tokenPath, err)
+		} else {
+			log.Printf("Obsidian token saved to %s", s.tokenPath)
+			saved = true
+		}
+	}
+	writeJSON(w, http.StatusOK, signinResponse{Token: token, Saved: saved})
 }
 
 // obsidianSignin calls api.obsidian.md/user/signin and returns the token.
@@ -251,6 +269,13 @@ func obsidianSignin(email, password, mfa string) (token string, needsMFA bool, e
 		return "", false, fmt.Errorf("no token in response (HTTP %d)", resp.StatusCode)
 	}
 	return tok, false, nil
+}
+
+func saveObsidianToken(tokenPath, token string) error {
+	if err := os.MkdirAll(filepath.Dir(tokenPath), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(tokenPath, []byte(token), 0o600)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
