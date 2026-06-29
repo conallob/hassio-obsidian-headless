@@ -110,12 +110,14 @@ var indexTmpl = template.Must(template.New("index").Parse(`<!DOCTYPE html>
   <div class="step-num">1</div>
   <div class="step-body">
     <strong>Get a pairing code from reMarkable</strong><br>
-    Open <a href="https://my.remarkable.com/device/desktop/new" target="_blank" rel="noopener">my.remarkable.com ↗</a>
-    and look for a <strong>Pair new device</strong> or <strong>Add device</strong> option.
-    reMarkable will show an 8-character alphanumeric code (e.g. <code>bufjmbgl</code>).<br>
+    Open
+    <a href="https://my.remarkable.com/device/desktop/new" target="_blank" rel="noopener">
+      my.remarkable.com/device/desktop/new ↗
+    </a>,
+    then click the <strong>Tablet</strong> tab. reMarkable will display an
+    8-character code (e.g. <code>teyubbmc</code>) valid for ~5 minutes.<br>
     <span style="color:#666;font-size:.9rem">
-      Note: the exact location of the pairing code changes as reMarkable update their site.
-      Try the <em>Tablet</em> or <em>Apps</em> tabs if you don't see it immediately.
+      The code is lowercase — enter it exactly as shown.
     </span>
   </div>
 </div>
