@@ -54,7 +54,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 # Install obsidian-headless (official Obsidian Sync CLI, requires ob binary)
-ARG OBSIDIAN_HEADLESS_VERSION=0.0.9
+ARG OBSIDIAN_HEADLESS_VERSION=0.0.12
 RUN npm install -g obsidian-headless@"${OBSIDIAN_HEADLESS_VERSION}"
 
 # Install rmapi (reMarkable Cloud CLI) — single static binary, arch-aware
