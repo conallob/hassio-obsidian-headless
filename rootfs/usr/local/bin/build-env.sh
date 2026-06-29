@@ -18,10 +18,13 @@ print(val if val is not None else '')
 
 # --- Obsidian auth ---
 # ob checks OBSIDIAN_AUTH_TOKEN first; if set it skips the on-disk credential
-# file entirely. This is the preferred non-interactive auth method for the add-on.
-# The token is the value shown in the Obsidian desktop app under
-# Settings → Sync → your account.
-export OBSIDIAN_AUTH_TOKEN="$(_opt obsidian_auth_token)"
+# file entirely. The config field is optional — the port 8422 web UI saves the
+# token to /data/obsidian.token so users don't need to paste it into config.
+_obsidian_token="$(_opt obsidian_auth_token)"
+if [ -z "${_obsidian_token}" ] && [ -f "/data/obsidian.token" ]; then
+    _obsidian_token="$(cat /data/obsidian.token | tr -d '[:space:]')"
+fi
+export OBSIDIAN_AUTH_TOKEN="${_obsidian_token}"
 
 # Point ob's config/state directory to /data so it persists across restarts.
 # On Linux, ob resolves: XDG_CONFIG_HOME/obsidian-headless (default: ~/.config/obsidian-headless)
