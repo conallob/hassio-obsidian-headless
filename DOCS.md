@@ -116,7 +116,8 @@ The add-on always serves a registration UI at **`http://<your-ha-ip>:8421/`**.
    across restarts
 
 Alternatively, paste a token directly into `remarkable_device_token` in the
-add-on configuration (obtain one from `https://my.remarkable.com/device/desktop/new`).
+add-on configuration (obtain one from `https://my.remarkable.com/device/desktop/new` —
+sign in, copy the 8-character alphanumeric code shown, e.g. `bufjmbgl`).
 
 If no token is configured, the add-on will wait at the registration UI until
 one is provided — no crash or restart loop.

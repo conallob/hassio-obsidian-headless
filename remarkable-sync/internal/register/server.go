@@ -3,8 +3,8 @@
 //
 // Flow:
 //  1. User opens the add-on's registration page (e.g. http://homeassistant:8421/).
-//  2. The page links to https://my.remarkable.com/device/connect/desktop where
-//     reMarkable shows a 6-character one-time code.
+//  2. The page links to https://my.remarkable.com/device/desktop/new where
+//     reMarkable shows an 8-character alphanumeric one-time code (e.g. "bufjmbgl").
 //  3. User enters the code into the form and submits.
 //  4. The server calls the reMarkable registration API, receives a device token,
 //     and writes it to tokenPath.
@@ -84,7 +84,7 @@ var indexTmpl = template.Must(template.New("index").Parse(`<!DOCTYPE html>
   .step-body{flex:1}
   a{color:#0066cc}
   input[type=text]{border:1px solid #ccc;border-radius:6px;padding:.5rem .75rem;
-    font-size:1.1rem;letter-spacing:.2em;width:10ch;text-transform:uppercase}
+    font-size:1.1rem;letter-spacing:.15em;width:10ch}
   button{background:#1a1a1a;color:#fff;border:none;border-radius:6px;
     padding:.55rem 1.25rem;font-size:1rem;cursor:pointer;margin-top:.5rem}
   button:hover{background:#333}
@@ -110,10 +110,10 @@ var indexTmpl = template.Must(template.New("index").Parse(`<!DOCTYPE html>
   <div class="step-num">1</div>
   <div class="step-body">
     <strong>Open the reMarkable pairing page</strong><br>
-    <a href="https://my.remarkable.com/device/connect/desktop" target="_blank" rel="noopener">
-      my.remarkable.com/device/connect/desktop ↗
+    <a href="https://my.remarkable.com/device/desktop/new" target="_blank" rel="noopener">
+      my.remarkable.com/device/desktop/new ↗
     </a><br>
-    <span style="color:#666;font-size:.9rem">Sign in if prompted, then copy the 6-character code shown.</span>
+    <span style="color:#666;font-size:.9rem">Sign in if prompted, then copy the 8-character code shown (e.g. <code>bufjmbgl</code>).</span>
   </div>
 </div>
 
@@ -124,7 +124,7 @@ var indexTmpl = template.Must(template.New("index").Parse(`<!DOCTYPE html>
     <form method="POST" action="/register" style="margin-top:.6rem">
       <label for="code">One-time code</label>
       <input id="code" name="code" type="text" maxlength="8" autocomplete="off"
-             placeholder="abc123" required>
+             placeholder="bufjmbgl" required>
       <br>
       <button type="submit">Register device</button>
     </form>
