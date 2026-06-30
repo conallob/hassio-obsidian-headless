@@ -261,7 +261,25 @@ func registerDevice(code string) (string, error) {
 		return "", err
 	}
 
-	resp, err := http.Post(registrationAPI, "application/json", bytes.NewReader(body))
+	// Use a custom client that preserves the POST method on redirects and
+	// sends Authorization: Bearer (empty token) as required by the reMarkable API.
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) > 0 {
+				req.Method = via[0].Method
+				req.Header = via[0].Header.Clone()
+			}
+			return nil
+		},
+	}
+	req, err := http.NewRequest(http.MethodPost, registrationAPI, bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer")
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("registration API: %w", err)
 	}
