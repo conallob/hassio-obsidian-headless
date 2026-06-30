@@ -138,51 +138,56 @@ func runSync(deviceToken, destRoot, cacheDir string, ocrClient *ocr.Client) erro
 	if err := client.Authenticate(); err != nil {
 		return fmt.Errorf("authenticate: %w", err)
 	}
-	log.Println("Authenticated with reMarkable cloud")
 
 	docs, err := client.ListDocuments(true)
 	if err != nil {
 		return fmt.Errorf("list documents: %w", err)
 	}
-	log.Printf("Found %d items", len(docs))
 
 	paths := rmcloud.BuildPathMap(docs)
 
+	var synced int
 	for _, doc := range docs {
 		if doc.IsCollection() {
 			continue
 		}
 		docPath := paths[doc.ID]
-		if err := syncDocument(client, doc, docPath, destRoot, cacheDir, ocrClient); err != nil {
+		changed, err := syncDocument(client, doc, docPath, destRoot, cacheDir, ocrClient)
+		if err != nil {
 			log.Printf("skip %q: %v", doc.VissibleName, err)
+		} else if changed {
+			synced++
 		}
 	}
 
-	// Write an index file at the vault output root listing all documents.
-	if err := writeIndex(destRoot, docs, paths); err != nil {
-		log.Printf("index write error: %v", err)
+	if synced > 0 {
+		// Write an index file at the vault output root listing all documents.
+		if err := writeIndex(destRoot, docs, paths); err != nil {
+			log.Printf("index write error: %v", err)
+		}
+		log.Printf("Sync complete: %d document(s) updated", synced)
 	}
 
-	log.Println("Sync complete")
 	return nil
 }
 
 // syncDocument writes (or updates) the markdown note and cached blob for a document.
-func syncDocument(client *rmcloud.Client, doc rmcloud.Document, docPath, destRoot, cacheDir string, ocrClient *ocr.Client) error {
+// Returns true if the document was downloaded and written (i.e. the cloud version changed).
+func syncDocument(client *rmcloud.Client, doc rmcloud.Document, docPath, destRoot, cacheDir string, ocrClient *ocr.Client) (bool, error) {
 	notePath := filepath.Join(destRoot, docPath+".md")
 	if err := os.MkdirAll(filepath.Dir(notePath), 0o755); err != nil {
-		return err
+		return false, err
 	}
 
 	// Use a version stamp file so we only re-download when the cloud version changes.
 	stampPath := filepath.Join(cacheDir, doc.ID+".v")
 	currentStamp := fmt.Sprintf("%d", doc.Version)
 	if existing, err := os.ReadFile(stampPath); err == nil && string(existing) == currentStamp {
-		return nil
+		return false, nil
 	}
 
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
-		return err
+		return false, err
 	}
 
 	var blob []byte
@@ -210,11 +215,11 @@ func syncDocument(client *rmcloud.Client, doc rmcloud.Document, docPath, destRoo
 	}
 
 	if err := writeNote(notePath, doc, docPath, blobMeta, ocrText); err != nil {
-		return err
+		return false, err
 	}
 
 	// Write version stamp only after a successful note write.
-	return os.WriteFile(stampPath, []byte(currentStamp), 0o644)
+	return true, os.WriteFile(stampPath, []byte(currentStamp), 0o644)
 }
 
 // blobMetadata holds structured data extracted from a reMarkable ZIP blob.
