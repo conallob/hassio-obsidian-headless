@@ -3,16 +3,17 @@ ARG BUILD_FROM
 
 # Stage 1: build Go binaries (remarkable-sync + rmapi).
 # golang:1.22-bookworm is multi-arch so this stage works on both amd64 and aarch64 runners.
-FROM golang:1.22-bookworm AS go-builder
+FROM golang:1.26-bookworm AS go-builder
 
 # Build the remarkable-sync daemon
 WORKDIR /build/remarkable-sync
 COPY remarkable-sync/ .
 RUN CGO_ENABLED=0 GOFLAGS=-mod=mod go build -trimpath -ldflags="-s -w" -o /remarkable-sync .
 
-# Build rmapi from source — no pre-built arm64 binary available in upstream releases
+# Build rmapi from source — no pre-built arm64 binary available in upstream releases.
+# Using ddvk/rmapi (active fork of archived juruen/rmapi) pinned to a release tag.
 WORKDIR /build/rmapi
-RUN git clone --depth 1 https://github.com/juruen/rmapi.git . && \
+RUN git clone --depth 1 --branch v0.0.34 https://github.com/ddvk/rmapi.git . && \
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /rmapi .
 
 
