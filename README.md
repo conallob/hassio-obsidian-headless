@@ -97,7 +97,7 @@ It also ships two optional extras that take the vault further:
 | [`obsidian-headless`](https://www.npmjs.com/package/obsidian-headless) | Official Obsidian Sync CLI |
 | [`obsidian-web-mcp`](https://github.com/jimprosser/obsidian-web-mcp) | MCP HTTP server |
 | [`remarkable-sync`](remarkable-sync/) | Go binary — reMarkable Cloud → Obsidian |
-| [`rmapi`](https://github.com/juruen/rmapi) | reMarkable Cloud API client (built from source) |
+| [`rmapi`](https://github.com/ddvk/rmapi) | reMarkable Cloud API client (built from source) |
 
 ---
 

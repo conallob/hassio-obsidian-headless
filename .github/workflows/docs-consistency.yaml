@@ -1,0 +1,54 @@
+name: Docs Consistency
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "DOCS.md"
+      - "README.md"
+      - "config.yaml"
+
+jobs:
+  check:
+    name: Check DOCS.md covers all config fields
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check every schema field is documented in DOCS.md
+        run: |
+          # Extract field names from the schema section of config.yaml.
+          # Matches lines like "  field_name: <type>" under "schema:".
+          fields=$(awk '/^schema:/{found=1; next} found && /^  [a-z]/{print $1}' config.yaml \
+                   | tr -d ':')
+
+          missing=()
+          for field in $fields; do
+            if ! grep -q "${field}" DOCS.md; then
+              missing+=("${field}")
+            fi
+          done
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "The following config fields are missing from DOCS.md:"
+            printf '  - %s\n' "${missing[@]}"
+            exit 1
+          fi
+
+          echo "All $(echo "$fields" | wc -w | tr -d ' ') schema fields are documented in DOCS.md."
+
+      - name: Check key ports are documented in both README.md and DOCS.md
+        run: |
+          failed=0
+          for port in 8420 8421 8422; do
+            for doc in README.md DOCS.md; do
+              if ! grep -q "${port}" "${doc}"; then
+                echo "Port ${port} is not mentioned in ${doc}"
+                failed=1
+              fi
+            done
+          done
+          exit $failed
