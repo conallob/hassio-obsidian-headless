@@ -75,6 +75,7 @@ COPY rootfs /
 RUN chmod +x \
     /etc/s6-overlay/s6-rc.d/obsidian-sync/run \
     /etc/s6-overlay/s6-rc.d/obsidian-mcp-server/run \
+    /etc/s6-overlay/s6-rc.d/obsidian-ingress/run \
     /etc/s6-overlay/s6-rc.d/remarkable-sync/run \
     /usr/local/bin/build-env.sh \
     /usr/local/bin/remarkable-sync

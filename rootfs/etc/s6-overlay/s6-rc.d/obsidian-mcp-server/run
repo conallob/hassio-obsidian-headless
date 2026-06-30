@@ -13,11 +13,15 @@ fi
 bashio::log.info "Starting Obsidian MCP server (tunnel: ${TUNNEL_MODE})"
 
 # --- Validate auth config ---
-# obsidian-vault-mcp supports bearer token auth and/or OAuth simultaneously.
-# At least one credential must be provided.
+# Unauthenticated access is only acceptable on a trusted local network
+# (tunnel_mode: none, enable_ingress: false). Any external exposure — Tailscale,
+# HTTPS reverse proxy, or HA ingress — requires at least one credential.
 if [ -z "${VAULT_MCP_TOKEN}" ] && [ -z "${VAULT_OAUTH_CLIENT_SECRET}" ]; then
-    bashio::log.fatal "Set mcp_auth_token (bearer) and/or oauth_client_secret in add-on options."
-    exec sleep inf
+    if [ "${TUNNEL_MODE}" != "none" ] || [ "${ENABLE_INGRESS}" = "true" ]; then
+        bashio::log.fatal "mcp_auth_token or oauth_client_secret is required when tunnel_mode is not 'none' or enable_ingress is true."
+        exec sleep inf
+    fi
+    bashio::log.warning "No MCP auth configured — port 8420 is unauthenticated. Only safe on a trusted local network."
 fi
 
 # --- Tailscale setup ---
