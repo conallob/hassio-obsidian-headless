@@ -3,7 +3,7 @@ ARG BUILD_FROM
 
 # Stage 1: build Go binaries (remarkable-sync + rmapi).
 # golang:1.22-bookworm is multi-arch so this stage works on both amd64 and aarch64 runners.
-FROM golang:1.25-bookworm AS go-builder
+FROM golang:1.26-bookworm AS go-builder
 
 # Build the remarkable-sync daemon
 WORKDIR /build/remarkable-sync
