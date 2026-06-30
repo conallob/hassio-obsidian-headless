@@ -44,6 +44,9 @@ export VAULT_MCP_TOKEN="$(_opt mcp_auth_token)"
 export VAULT_OAUTH_CLIENT_ID="$(_opt oauth_client_id)"
 export VAULT_OAUTH_CLIENT_SECRET="$(_opt oauth_client_secret)"
 
+# --- HA Ingress ---
+export ENABLE_INGRESS="$(_opt enable_ingress)"
+
 # --- Tunnel mode ---
 export TUNNEL_MODE="$(_opt tunnel_mode)"
 export TAILSCALE_AUTH_KEY="$(_opt tailscale_auth_key)"

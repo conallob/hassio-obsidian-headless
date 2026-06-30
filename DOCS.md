@@ -112,6 +112,29 @@ At least one of these must be set:
 - **OAuth 2.1** (`oauth_client_secret`): for integration with external OAuth providers.
   Set `oauth_client_id` to customise the client ID (default: `vault-mcp-client`).
 
+### HA Ingress (`enable_ingress`)
+
+Set `enable_ingress: true` to expose the MCP server through Home Assistant's built-in
+reverse proxy at `/obsidian/mcp`. This is the easiest way to give Claude.ai or another
+remote MCP client access without opening extra ports — HA handles HTTPS termination and
+session authentication.
+
+**Requirements:** `enable_mcp: true` and at least one of `mcp_auth_token` or
+`oauth_client_secret`. HA ingress adds its own session layer, but the MCP credential
+is still required.
+
+The ingress URL is shown in the add-on panel under **Open Web UI**:
+
+```
+https://<your-ha-url>/api/hassio_ingress/<token>/obsidian/mcp
+```
+
+> **Local-only unauthenticated mode**: if `tunnel_mode: none` and `enable_ingress:
+> false`, port 8420 does _not_ require a bearer token. This is acceptable on a trusted
+> local network. Any external path — Tailscale, HTTPS proxy, or HA ingress — enforces
+> auth.
+
+
 ### Tunnel mode (`tunnel_mode`)
 
 | Value | Description |
@@ -122,7 +145,10 @@ At least one of these must be set:
 
 ### Connecting Claude.ai
 
-In Claude.ai → Settings → Integrations → Add MCP Server:
+**Via HA ingress (recommended):** set `enable_ingress: true`, then add the ingress URL
+from the add-on panel and your `mcp_auth_token` as the Bearer token.
+
+**Via direct port:** in Claude.ai → Settings → Integrations → Add MCP Server:
 
 - **URL**: `http://<ha-ip>:8420/` (or your Tailscale/HTTPS URL)
 - **Auth**: Bearer token or OAuth 2.1 depending on what you configured above

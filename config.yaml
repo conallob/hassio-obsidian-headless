@@ -16,6 +16,10 @@ init: false
 homeassistant_api: false
 host_network: false
 
+ingress: true
+ingress_port: 8423
+ingress_entry: /obsidian/mcp
+
 ports:
   8420/tcp: 8420
   8421/tcp: 8421
@@ -54,6 +58,13 @@ options:
   mcp_auth_token: ~
   oauth_client_id: "vault-mcp-client"
   oauth_client_secret: ~
+
+  # --- HA Ingress (only relevant when enable_mcp is true) ---
+  # Exposes the MCP server via HA's built-in reverse proxy at /obsidian/mcp.
+  # Requires mcp_auth_token or oauth_client_secret to be set.
+  # Direct (unauthenticated) access via port 8420 is still allowed on the local
+  # network regardless of this setting.
+  enable_ingress: false
 
   # --- Tunnel mode (only relevant when enable_mcp is true) ---
   # "none"      — port 8420 exposed directly (use HA firewall / VPN)
@@ -99,6 +110,7 @@ schema:
   mcp_auth_token: password?
   oauth_client_id: str?
   oauth_client_secret: password?
+  enable_ingress: bool
   tunnel_mode: "list(none|tailscale|https)"
   tailscale_auth_key: password?
   tls_cert_path: str?
