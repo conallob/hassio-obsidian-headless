@@ -44,4 +44,6 @@ fi
 
 # --- Continuous sync ---
 bashio::log.info "Starting continuous sync for vault '${VAULT_NAME}' at ${VAULT_PATH}"
-exec ob sync --continuous --path "${VAULT_PATH}"
+# ob has no --quiet flag; filter out routine "Fully synced" heartbeat lines that
+# would otherwise spam the log on every sync cycle with no changes.
+ob sync --continuous --path "${VAULT_PATH}" 2>&1 | grep -Ev --line-buffered "Fully synced"
