@@ -112,9 +112,9 @@ At least one of these must be set:
 - **OAuth 2.1** (`oauth_client_secret`): for integration with external OAuth providers.
   Set `oauth_client_id` to customise the client ID (default: `vault-mcp-client`).
 
-### Tunnel mode
+### Tunnel mode (`tunnel_mode`)
 
-| Mode | Description |
+| Value | Description |
 |---|---|
 | `none` (default) | Port 8420 on your local network only |
 | `tailscale` | Add-on joins your tailnet; set `tailscale_auth_key` |
@@ -151,7 +151,9 @@ always available so you can pair your device before enabling sync.
 - Copy the 8-character lowercase code shown (e.g. `xxxxxxxx`) — it expires in ~5 minutes
 
 If no token is saved yet, the sync loop waits silently until one is provided —
-no crash or restart loop.
+no crash or restart loop. The saved token is stored as `remarkable_device_token`
+internally; you can also set it explicitly in the add-on configuration to skip
+the registration UI.
 
 ### What gets synced
 
