@@ -1,4 +1,4 @@
-## 0.2.0
+## 0.0.5
 
 ### New features
 - **Browser-based Obsidian auth token generator** (port 8422): sign in with your Obsidian account in the browser — no CLI needed. The token is saved automatically to `/data/obsidian.token` and picked up on restart without any config change.
@@ -20,6 +20,6 @@
 - CI build triggers scoped to container-relevant files only — markdown edits no longer trigger a full image rebuild.
 - Added docs-consistency CI check to prevent `DOCS.md` drifting from `config.yaml`.
 
-## 0.1.0
+## 0.0.4
 
 - Initial release: headless Obsidian Sync daemon, optional MCP server (Bearer token + OAuth 2.1, Tailscale/HTTPS tunnel modes), optional reMarkable Cloud sync with PDF extraction, OCR support, and version-stamp caching.
