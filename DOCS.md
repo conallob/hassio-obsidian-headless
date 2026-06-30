@@ -1,13 +1,36 @@
 # Obsidian Headless — Home Assistant Add-on
 
-This add-on provides two services in a single container:
+This add-on provides three services in a single container:
 
 1. **Obsidian Sync daemon** (`obsidian-headless`) — keeps a local copy of your
    vault continuously synced via your Obsidian Sync subscription. No GUI required.
 
 2. **Obsidian MCP server** (`obsidian-web-mcp`) — exposes your vault as a
-   remote MCP server over HTTP so AI assistants (e.g. Claude) can read and
-   search your notes from anywhere.
+   **remote, streamable HTTP** MCP server so AI assistants (e.g. Claude.ai) can
+   read and search your notes from anywhere — not just from a desktop machine.
+
+3. **reMarkable Cloud sync** (optional) — pulls documents from your reMarkable
+   tablet into Obsidian automatically as Markdown notes with embedded PDFs.
+
+---
+
+## Why this add-on vs the alternatives?
+
+| | This add-on | Obsidian Community Plugin MCP servers | mcpvault.org |
+|---|---|---|---|
+| Hosting | Self-hosted on your HA instance | Self-hosted, runs inside Obsidian desktop | Third-party cloud |
+| Obsidian desktop required? | No — syncs headlessly 24/7 | Yes — Obsidian must be open | No |
+| MCP transport | **Remote streamable HTTP** | Local stdio / localhost only | HTTP (cloud) |
+| Works with Claude.ai web? | **Yes** | No — desktop-only clients only | Yes |
+| Works with API/custom clients? | **Yes** | No | Yes |
+| Data leaves your network? | No | No | Yes |
+| Tunnel options | Local network, Tailscale, HTTPS | None | N/A |
+
+**The key differentiator**: Community plugin MCP servers use the stdio or
+localhost transport, which only works with desktop MCP clients (e.g. Claude
+Desktop). This add-on serves the streamable HTTP transport over your network,
+so any MCP client — including Claude.ai, custom API integrations, and remote
+agents — can connect without Obsidian or a desktop machine running.
 
 ---
 
@@ -28,12 +51,16 @@ includes a built-in token generator that handles this for you.
 1. Install and **start** the add-on (no configuration needed yet)
 2. Open **`http://<your-ha-ip>:8422/`** in your browser
 3. Sign in with your Obsidian account email and password (plus 2FA if enabled)
-4. Copy the token shown on screen
-5. Paste it into `obsidian_auth_token` in the add-on configuration
-6. Restart the add-on
+4. The token is **saved automatically** — no copy/paste into config needed
+5. Restart the add-on
 
 > Your credentials are sent directly to `api.obsidian.md` — they are never
-> stored or logged by the add-on.
+> stored or logged by the add-on. The resulting token is saved to
+> `/data/obsidian.token` and picked up automatically on restart.
+
+If you prefer to set the token explicitly, paste it into `obsidian_auth_token`
+in the add-on configuration. A manually configured token takes priority over
+the saved file.
 
 **Alternative (if you have Node 22 installed locally):**
 ```bash
@@ -61,8 +88,8 @@ Minimum required fields:
 
 | Field | Description |
 |---|---|
-| `obsidian_auth_token` | Token from Step 1 |
 | `vault_name` | Exact vault name from Step 2 |
+| `obsidian_auth_token` | Optional — auto-saved by the port 8422 UI; set explicitly to override |
 | `vault_password` | Only if your vault uses E2E encryption |
 
 The vault will sync to `/share/obsidian-vault` on your HA host, accessible
@@ -83,6 +110,7 @@ At least one of these must be set:
   openssl rand -hex 32
   ```
 - **OAuth 2.1** (`oauth_client_secret`): for integration with external OAuth providers.
+  Set `oauth_client_id` to customise the client ID (default: `vault-mcp-client`).
 
 ### Tunnel mode
 
@@ -109,11 +137,12 @@ Obsidian vault. This is a **one-way sync**: reMarkable → Obsidian.
 ### Step 1: Register your device
 
 The add-on always serves a registration UI at **`http://<your-ha-ip>:8421/`**.
+You do not need `enable_remarkable: true` to use this page — registration is
+always available so you can pair your device before enabling sync.
 
 1. Open that URL in your browser
-2. Sign in with your reMarkable account if prompted
-3. Enter the 8-character code from step below and submit
-4. The device token is saved to `/data/remarkable-sync/device.token` and reused
+2. Enter the 8-character code from the step below and submit
+3. The device token is saved to `/data/remarkable-sync/device.token` and reused
    across restarts
 
 **To get your pairing code:**
@@ -121,8 +150,8 @@ The add-on always serves a registration UI at **`http://<your-ha-ip>:8421/`**.
 - Click the **Tablet** tab
 - Copy the 8-character lowercase code shown (e.g. `xxxxxxxx`) — it expires in ~5 minutes
 
-If no token is configured, the add-on will wait at the registration UI until
-one is provided — no crash or restart loop.
+If no token is saved yet, the sync loop waits silently until one is provided —
+no crash or restart loop.
 
 ### What gets synced
 
@@ -164,10 +193,12 @@ with pages separated by `---`.
 
 | Symptom | Fix |
 |---|---|
-| Logs show `obsidian_auth_token is not set` | Use `http://<ha-ip>:8422/` to get your token |
+| Logs show `No Obsidian auth token found` | Open `http://<ha-ip>:8422/` and sign in — token is saved automatically |
 | Logs show `vault_name is required` | Set `vault_name` in the add-on config |
-| Sync fails with auth error | Token may have expired — re-run the token generator |
-| Vault password error | Set `vault_password` if your vault uses E2E encryption |
+| Sync fails with auth error | Token may have expired — re-run the token generator at port 8422 |
+| `vault_password` error | Set `vault_password` if your vault uses E2E encryption |
 | MCP server won't start | Set at least one of `mcp_auth_token` or `oauth_client_secret` |
+| Config changes revert to defaults | Ensure `password` fields are either unset or contain a non-empty value |
+| reMarkable registration returns HTTP 405 | Try a fresh pairing code — codes expire after ~5 minutes |
 
 Full logs: **Settings → Add-ons → Obsidian Headless → Log**
