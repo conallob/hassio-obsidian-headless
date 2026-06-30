@@ -1,0 +1,47 @@
+name: Update Changelog
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-changelog:
+    name: Append release notes to CHANGELOG.md
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Prepend release notes
+        env:
+          VERSION: ${{ github.event.release.tag_name }}
+          BODY: ${{ github.event.release.body }}
+        run: |
+          # Strip leading "v" from tag (v0.0.9 → 0.0.9)
+          version="${VERSION#v}"
+
+          # Build the new entry
+          entry="## ${version}"$'\n\n'"${BODY}"
+
+          # Prepend to CHANGELOG.md (create if missing)
+          if [ -f CHANGELOG.md ]; then
+            printf '%s\n\n' "${entry}" | cat - CHANGELOG.md > CHANGELOG.md.tmp
+            mv CHANGELOG.md.tmp CHANGELOG.md
+          else
+            printf '%s\n' "${entry}" > CHANGELOG.md
+          fi
+
+      - name: Commit and push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: add ${GITHUB_REF_NAME} release notes to CHANGELOG.md [skip ci]"
+          git push origin main
