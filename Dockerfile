@@ -18,12 +18,13 @@ RUN git clone --depth 1 --branch v0.0.34 https://github.com/ddvk/rmapi.git . && 
 
 
 # Stage 2: install obsidian-vault-mcp into a prefix we can copy across.
-# Debian bookworm's apt python3 package is 3.11, so this MUST match — pip
-# installs into /usr/local/lib/python3.X/site-packages, and CPython only
-# auto-adds that directory to sys.path for its OWN X.Y version. A mismatch
-# (e.g. building with 3.12 here but running apt's 3.11 in the final image)
-# leaves the installed package on disk but unimportable at runtime.
-FROM python:3.11-slim AS mcp-builder
+# obsidian-web-mcp requires Python >=3.12, but Debian bookworm's apt only
+# ships 3.11 — there is no way to satisfy both with apt alone. Instead of
+# relying on apt's python3 in the final image, we copy this stage's entire
+# Python 3.12 runtime (interpreter + stdlib + shared lib) into the final
+# image below, so the exact same interpreter that ran pip install also runs
+# obsidian-vault-mcp at runtime.
+FROM python:3.12-slim AS mcp-builder
 
 WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends git build-essential && rm -rf /var/lib/apt/lists/*
@@ -56,16 +57,33 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
   && apt-get install -y --no-install-recommends nodejs \
   && rm -rf /var/lib/apt/lists/*
 
-# Runtime Python deps for obsidian-vault-mcp
+# Shared libraries CPython's standard extension modules link against
+# (_ssl, _hashlib, zlib, bz2, lzma, sqlite3, pyexpat, _ctypes). apt's own
+# python3 package is NOT installed here — see the Python 3.12 runtime copy
+# below for why.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 \
-    python3-pip \
     ripgrep \
+    libssl3 \
+    libffi8 \
+    zlib1g \
+    libbz2-1.0 \
+    liblzma5 \
+    libsqlite3-0 \
+    libexpat1 \
   && rm -rf /var/lib/apt/lists/*
 
 # Install obsidian-headless (official Obsidian Sync CLI, requires ob binary)
 ARG OBSIDIAN_HEADLESS_VERSION=0.0.12
 RUN npm install -g obsidian-headless@"${OBSIDIAN_HEADLESS_VERSION}"
+
+# Copy the Python 3.12 runtime itself (interpreter, stdlib, shared lib) from
+# the mcp-builder stage — this is the same interpreter pip used to install
+# obsidian-vault-mcp, avoiding any version mismatch with apt's python3.
+COPY --from=mcp-builder /usr/local/bin/python3.12 /usr/local/bin/python3.12
+COPY --from=mcp-builder /usr/local/lib/python3.12 /usr/local/lib/python3.12
+COPY --from=mcp-builder /usr/local/lib/libpython3.12.so* /usr/local/lib/
+RUN ldconfig \
+  && ln -sf /usr/local/bin/python3.12 /usr/local/bin/python3
 
 # Copy the installed obsidian-vault-mcp package + its deps from the builder.
 COPY --from=mcp-builder /install /usr/local
