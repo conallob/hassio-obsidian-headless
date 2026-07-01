@@ -62,8 +62,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ARG OBSIDIAN_HEADLESS_VERSION=0.0.12
 RUN npm install -g obsidian-headless@"${OBSIDIAN_HEADLESS_VERSION}"
 
-# Copy the installed obsidian-vault-mcp package + its deps from the builder
+# Copy the installed obsidian-vault-mcp package + its deps from the builder.
+# Rewrite the shebang baked in by pip on python:3.12-slim (/usr/local/bin/python3)
+# to match where apt installs Python in the HA base image (/usr/bin/python3).
 COPY --from=mcp-builder /install /usr/local
+RUN sed -i '1s|#!/usr/local/bin/python3|#!/usr/bin/python3|' /usr/local/bin/vault-mcp
 
 # Copy Go binaries from the builder
 COPY --from=go-builder /remarkable-sync /usr/local/bin/remarkable-sync
