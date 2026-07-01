@@ -1,3 +1,11 @@
+## 0.0.10
+
+## What's Changed
+* fix: _opt() serialises JSON booleans as lowercase true/false by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/15
+
+
+**Full Changelog**: https://github.com/conallob/hassio-obsidian-headless/compare/v0.0.9...v0.0.10
+
 ## 0.0.9
 
 ## What's Changed
