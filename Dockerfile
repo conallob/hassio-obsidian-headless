@@ -62,7 +62,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ARG OBSIDIAN_HEADLESS_VERSION=0.0.12
 RUN npm install -g obsidian-headless@"${OBSIDIAN_HEADLESS_VERSION}"
 
-# Copy the installed obsidian-vault-mcp package + its deps from the builder
+# Copy the installed obsidian-vault-mcp package + its deps from the builder.
 COPY --from=mcp-builder /install /usr/local
 
 # Copy Go binaries from the builder
