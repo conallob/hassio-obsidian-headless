@@ -1,3 +1,11 @@
+## 0.0.11
+
+## What's Changed
+* fix: remove shebang in vault-mcp, invoke script using python3 binary instead by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/16
+
+
+**Full Changelog**: https://github.com/conallob/hassio-obsidian-headless/compare/v0.0.10...v0.0.11
+
 ## 0.0.10
 
 ## What's Changed
