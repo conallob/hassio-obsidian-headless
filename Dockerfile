@@ -56,7 +56,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
     ripgrep \
-  && rm -rf /var/lib/apt/lists/*
+  && rm -rf /var/lib/apt/lists/* \
+  && ln -sf /usr/bin/python3 /usr/local/bin/python3
 
 # Install obsidian-headless (official Obsidian Sync CLI, requires ob binary)
 ARG OBSIDIAN_HEADLESS_VERSION=0.0.12
