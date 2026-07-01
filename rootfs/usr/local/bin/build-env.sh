@@ -8,11 +8,16 @@ OPTIONS="/data/options.json"
 
 _opt() {
     python3 -c "
-import json, sys
+import json
 with open('${OPTIONS}') as f:
     d = json.load(f)
-val = d.get('$1', '')
-print(val if val is not None else '')
+val = d.get('$1')
+if val is None:
+    print('')
+elif isinstance(val, bool):
+    print('true' if val else 'false')
+else:
+    print(val)
 "
 }
 
