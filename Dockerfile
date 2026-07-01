@@ -18,7 +18,12 @@ RUN git clone --depth 1 --branch v0.0.34 https://github.com/ddvk/rmapi.git . && 
 
 
 # Stage 2: install obsidian-vault-mcp into a prefix we can copy across.
-FROM python:3.12-slim AS mcp-builder
+# Debian bookworm's apt python3 package is 3.11, so this MUST match — pip
+# installs into /usr/local/lib/python3.X/site-packages, and CPython only
+# auto-adds that directory to sys.path for its OWN X.Y version. A mismatch
+# (e.g. building with 3.12 here but running apt's 3.11 in the final image)
+# leaves the installed package on disk but unimportable at runtime.
+FROM python:3.11-slim AS mcp-builder
 
 WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends git build-essential && rm -rf /var/lib/apt/lists/*
