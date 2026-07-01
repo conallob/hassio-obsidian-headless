@@ -65,4 +65,14 @@ fi
 # --- Launch MCP server ---
 # vault-mcp reads all configuration from environment variables (see build-env.sh).
 # VAULT_PATH, VAULT_MCP_PORT, VAULT_MCP_TOKEN, VAULT_OAUTH_CLIENT_* are already exported.
-exec vault-mcp
+#
+# Invoked via `python3 <script>` rather than executing the script directly:
+# pip bakes the builder stage's interpreter path into the shebang
+# (python:3.12-slim uses /usr/local/bin/python3), which does not exist in the
+# HA base image (apt installs Python at /usr/bin/python3). Calling the
+# interpreter explicitly sidesteps the shebang entirely.
+if ! command -v vault-mcp &>/dev/null; then
+    bashio::log.fatal "vault-mcp binary not found — image may be corrupt. Rebuild the add-on."
+    exec sleep inf
+fi
+exec python3 "$(command -v vault-mcp)"
