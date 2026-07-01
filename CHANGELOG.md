@@ -1,3 +1,11 @@
+## 0.0.12
+
+## What's Changed
+* fix: copy Python 3.12 runtime into final image for vault-mcp by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/17
+
+
+**Full Changelog**: https://github.com/conallob/hassio-obsidian-headless/compare/v0.0.11...v0.0.12
+
 ## 0.0.11
 
 ## What's Changed
