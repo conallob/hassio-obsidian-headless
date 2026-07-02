@@ -14,11 +14,11 @@ bashio::log.info "Starting Obsidian MCP server (tunnel: ${TUNNEL_MODE})"
 
 # --- Validate auth config ---
 # Unauthenticated access is only acceptable on a trusted local network
-# (tunnel_mode: none, enable_ingress: false). Any external exposure — Tailscale,
-# HTTPS reverse proxy, or HA ingress — requires at least one credential.
+# (tunnel_mode: none). Any external exposure — Tailscale or HTTPS reverse
+# proxy — requires at least one credential.
 if [ -z "${VAULT_MCP_TOKEN}" ] && [ -z "${VAULT_OAUTH_CLIENT_SECRET}" ]; then
-    if [ "${TUNNEL_MODE}" != "none" ] || [ "${ENABLE_INGRESS}" = "true" ]; then
-        bashio::log.fatal "mcp_auth_token or oauth_client_secret is required when tunnel_mode is not 'none' or enable_ingress is true."
+    if [ "${TUNNEL_MODE}" != "none" ]; then
+        bashio::log.fatal "mcp_auth_token or oauth_client_secret is required when tunnel_mode is not 'none'."
         exec sleep inf
     fi
     bashio::log.warning "No MCP auth configured — port 8420 is unauthenticated. Only safe on a trusted local network."
