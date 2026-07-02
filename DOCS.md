@@ -121,6 +121,18 @@ means that runtime copy and the final base image have drifted apart — see
 the `Dockerfile` comments around the `mcp-builder` stage for the current
 pinning rationale.
 
+### Network binding
+
+The MCP server listens on `0.0.0.0:8420` inside the container (not `127.0.0.1`),
+so it's reachable both via the published port 8420 on your LAN and via the
+in-container HA ingress proxy. What's actually reachable from outside the
+container is still controlled by Docker's port publishing (`ports` in
+`config.yaml`) and your `tunnel_mode`/`enable_ingress` settings — binding all
+interfaces here does not, by itself, expose anything beyond what you've
+already opted into. Auth (bearer token and/or OAuth) is enforced regardless
+of how the request arrives, except in the local-only, no-tunnel case
+described above.
+
 ### Authentication
 
 At least one of these must be set:
