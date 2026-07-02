@@ -1,3 +1,12 @@
+## 0.0.13
+
+## What's Changed
+* docs: clarify obsidian-web-mcp is a wrapped third-party Python project by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/21
+* fix: pin mcp-builder to python:3.12-slim-bookworm to avoid glibc drift by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/19
+
+
+**Full Changelog**: https://github.com/conallob/hassio-obsidian-headless/compare/v0.0.12...v0.0.13
+
 ## 0.0.12
 
 ## What's Changed
