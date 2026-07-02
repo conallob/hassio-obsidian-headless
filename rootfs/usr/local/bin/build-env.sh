@@ -48,19 +48,16 @@ export ENABLE_MCP="$(_opt enable_mcp)"
 # unreachable from the LAN even with port 8420 published. Docker's own port
 # mapping (config.yaml `ports`) already controls what's exposed externally,
 # so binding all interfaces inside the container is safe here — the same as
-# every other service this add-on runs (obsidian-headless UIs, ingress proxy).
+# every other service this add-on runs (the obsidian-headless UIs).
 export VAULT_MCP_HOST="0.0.0.0"
 export VAULT_MCP_PORT="8420"
 export VAULT_MCP_TOKEN="$(_opt mcp_auth_token)"
 export VAULT_OAUTH_CLIENT_ID="$(_opt oauth_client_id)"
 export VAULT_OAUTH_CLIENT_SECRET="$(_opt oauth_client_secret)"
 # Disable upstream's DNS-rebinding Host-header allowlist: clients may reach
-# this server via a LAN IP, mDNS name, Tailscale hostname, or the in-container
-# ingress proxy, none of which can be known ahead of time.
+# this server via a LAN IP, mDNS name, or a Tailscale hostname, none of which
+# can be known ahead of time.
 export VAULT_MCP_ALLOWED_HOSTS="*"
-
-# --- HA Ingress ---
-export ENABLE_INGRESS="$(_opt enable_ingress)"
 
 # --- Tunnel mode ---
 export TUNNEL_MODE="$(_opt tunnel_mode)"
