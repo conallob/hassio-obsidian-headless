@@ -95,9 +95,15 @@ It also ships two optional extras that take the vault further:
 | Component | Role |
 |---|---|
 | [`obsidian-headless`](https://www.npmjs.com/package/obsidian-headless) | Official Obsidian Sync CLI |
-| [`obsidian-web-mcp`](https://github.com/jimprosser/obsidian-web-mcp) | MCP HTTP server |
+| [`obsidian-web-mcp`](https://github.com/jimprosser/obsidian-web-mcp) | Third-party Python MCP HTTP server (vault search, indexing, MCP protocol) — this add-on packages it, it is not our own implementation |
 | [`remarkable-sync`](remarkable-sync/) | Go binary — reMarkable Cloud → Obsidian |
 | [`rmapi`](https://github.com/ddvk/rmapi) | reMarkable Cloud API client (built from source) |
+
+> **Why Python for the MCP server?** `obsidian-web-mcp` already implements the
+> MCP protocol, vault search/indexing, and OAuth 2.1 — building our own from
+> scratch (in Go or otherwise) would mean reimplementing all of that. The
+> trade-off is a Python runtime baked into the image (see [DOCS.md](DOCS.md#mcp-server-runtime)
+> for how that's kept working across HA base image updates).
 
 ---
 

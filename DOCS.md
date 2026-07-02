@@ -101,6 +101,26 @@ from other add-ons and the HA file system.
 
 Set `enable_mcp: true` to expose your vault as a remote MCP server on port 8420.
 
+### MCP server runtime
+
+The MCP server itself is [`obsidian-web-mcp`](https://github.com/jimprosser/obsidian-web-mcp),
+a third-party **Python** project — this add-on packages and configures it, it is
+not code we maintain. It was chosen because it already implements the MCP
+protocol (streamable HTTP transport), vault search/indexing, frontmatter
+parsing, and Bearer/OAuth 2.1 auth; writing an equivalent from scratch (e.g.
+in Go, matching the rest of this add-on's own binaries) would mean
+reimplementing all of that.
+
+The trade-off is that the final container image needs a working Python 3.12
+runtime. Since Debian bookworm's `apt` only ships Python 3.11, and
+`obsidian-web-mcp` requires 3.12+, the Dockerfile copies a self-contained
+Python 3.12 runtime out of a `python:3.12-slim-bookworm` builder stage rather
+than relying on `apt`. If you see the MCP server crash-looping in the logs
+with a `ModuleNotFoundError` or a `GLIBC_x` version error, it almost always
+means that runtime copy and the final base image have drifted apart — see
+the `Dockerfile` comments around the `mcp-builder` stage for the current
+pinning rationale.
+
 ### Authentication
 
 At least one of these must be set:
