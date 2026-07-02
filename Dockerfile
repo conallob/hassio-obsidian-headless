@@ -24,7 +24,13 @@ RUN git clone --depth 1 --branch v0.0.34 https://github.com/ddvk/rmapi.git . && 
 # Python 3.12 runtime (interpreter + stdlib + shared lib) into the final
 # image below, so the exact same interpreter that ran pip install also runs
 # obsidian-vault-mcp at runtime.
-FROM python:3.12-slim AS mcp-builder
+#
+# Pin the Debian codename explicitly (-bookworm, not the floating -slim tag).
+# The floating tag was silently rebased to a newer Debian release with a
+# newer glibc than the HA base image ships, breaking the copied binary at
+# runtime: "version `GLIBC_2.38' not found". Pinning the codename ties the
+# builder's glibc to the same release the final image (BUILD_FROM) uses.
+FROM python:3.12-slim-bookworm AS mcp-builder
 
 WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends git build-essential && rm -rf /var/lib/apt/lists/*
