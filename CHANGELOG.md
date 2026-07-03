@@ -1,3 +1,12 @@
+## 0.0.14
+
+## What's Changed
+* fix: bind MCP server to 0.0.0.0 instead of upstream's 127.0.0.1 default by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/22
+* revert: remove HA Ingress support for the MCP server by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/23
+
+
+**Full Changelog**: https://github.com/conallob/hassio-obsidian-headless/compare/v0.0.13...v0.0.14
+
 ## 0.0.13
 
 ## What's Changed
