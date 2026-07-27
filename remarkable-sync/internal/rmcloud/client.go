@@ -14,7 +14,11 @@ import (
 
 const (
 	// authURL exchanges a device token for a short-lived user token.
-	authURL = "https://my.remarkable.com/token/json/2/user/new"
+	// reMarkable moved this API off my.remarkable.com (which now 405s/redirects
+	// to a dead host) to webapp-prod.cloud.remarkable.engineering — see
+	// ddvk/rmapi commit b41e13a ("fix auth url", 2022), which we're pinned to
+	// (v0.0.34) but had not mirrored in our own independent Go client.
+	authURL = "https://webapp-prod.cloud.remarkable.engineering/token/json/2/user/new"
 	// docsBase is the document storage service root.
 	docsBase = "https://document-storage-production-dot-remarkable-production.appspot.com"
 )
@@ -48,7 +52,16 @@ type Client struct {
 func New(deviceToken string) *Client {
 	return &Client{
 		deviceToken: deviceToken,
-		http:        &http.Client{Timeout: 30 * time.Second},
+		http: &http.Client{
+			Timeout: 30 * time.Second,
+			// Don't silently follow redirects: if reMarkable moves an API host
+			// again, a followed redirect can land on an unrelated or dead
+			// domain, surfacing as a confusing DNS failure instead of a clear
+			// non-2xx status from the endpoint we actually intended to call.
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		},
 	}
 }
 
