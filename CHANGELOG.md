@@ -1,3 +1,12 @@
+## 0.0.17
+
+## What's Changed
+* chore: standardize on Go 1.26 across the repo by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/29
+* feat: shell out to rmapi instead of our own reMarkable API client by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/28
+
+
+**Full Changelog**: https://github.com/conallob/hassio-obsidian-headless/compare/v0.0.16...v0.0.17
+
 ## 0.0.16
 
 ## What's Changed
