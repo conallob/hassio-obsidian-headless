@@ -62,39 +62,19 @@ configuration:
   enable_remarkable:
     name: Enable reMarkable Sync
     description: >-
-      Sync documents between your reMarkable tablet and your Obsidian vault.
-      Downloads reMarkable docs as PDFs into <vault>/reMarkable/.
-      Optionally uploads PDFs back to reMarkable (see remarkable_bidirectional).
-  remarkable_one_time_code:
-    name: reMarkable One-Time Code
+      Sync documents from your reMarkable tablet into your Obsidian vault.
+      Pair your device at the registration UI on port 8421 — no config field
+      needed for credentials. One-way sync: reMarkable → Obsidian.
+  remarkable_output_dir:
+    name: reMarkable Destination Folder
     description: >-
-      One-time registration code for the reMarkable Cloud API.
-      Obtain it at https://my.remarkable.com/device/desktop/new
-      Only required on first run; credentials are cached in /data/rmapi/ afterwards.
-      Clear this field after successful first sync.
-  remarkable_rm_folder:
-    name: reMarkable Folder
-    description: >-
-      Folder on your reMarkable to sync from (and upload to).
-      Use '/' for the root (all documents). Example: '/My Books'
-  remarkable_obsidian_folder:
-    name: Obsidian Destination Folder
-    description: >-
-      Subfolder inside your Obsidian vault where synced PDFs are stored.
-      Default: 'reMarkable'. Place PDFs in '<folder>/Upload/' to upload them
-      to your reMarkable tablet.
+      Subfolder inside your Obsidian vault where synced notes are stored.
+      Default: 'reMarkable'.
   remarkable_sync_interval:
-    name: Sync Interval (minutes)
+    name: Sync Interval (seconds)
     description: >-
-      How often to sync with reMarkable Cloud, in minutes. Default: 60.
-      For an immediate on-demand sync, create the file /data/.remarkable-sync-now
-      (e.g. via an HA shell command automation).
-  remarkable_bidirectional:
-    name: Bidirectional Sync
-    description: >-
-      When enabled, PDFs placed in <vault>/reMarkable/Upload/ are uploaded
-      to your reMarkable and moved to <vault>/reMarkable/Uploaded/.
-      When disabled, sync is one-way: reMarkable → Obsidian only.
+      How often to poll reMarkable Cloud for new/updated documents, in
+      seconds. Default: 300.
 
 network:
   8420/tcp: MCP HTTP server port

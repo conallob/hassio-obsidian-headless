@@ -66,11 +66,8 @@ export TLS_CERT_PATH="$(_opt tls_cert_path)"
 export TLS_KEY_PATH="$(_opt tls_key_path)"
 
 # --- reMarkable sync ---
-export ENABLE_REMARKABLE="$(_opt enable_remarkable)"
-export REMARKABLE_ONE_TIME_CODE="$(_opt remarkable_one_time_code)"
-export REMARKABLE_RM_FOLDER="$(_opt remarkable_rm_folder)"
-export REMARKABLE_OBSIDIAN_FOLDER="$(_opt remarkable_obsidian_folder)"
-export REMARKABLE_SYNC_INTERVAL="$(_opt remarkable_sync_interval)"
-export REMARKABLE_BIDIRECTIONAL="$(_opt remarkable_bidirectional)"
-# rmapi reads its config (auth tokens) from this directory
+# The remarkable-sync/run s6 script sets ENABLE_REMARKABLE/SYNC_INTERVAL/etc.
+# itself from bashio::config directly. Only RMAPI_CONFIG is needed here: it's
+# where the rmapi CLI (shelled out to via internal/rmapicli) persists its own
+# device/user tokens after registration.
 export RMAPI_CONFIG="/data/rmapi"
