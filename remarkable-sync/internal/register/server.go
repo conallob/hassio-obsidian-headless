@@ -28,7 +28,11 @@ import (
 	"github.com/google/uuid"
 )
 
-const registrationAPI = "https://my.remarkable.com/token/json/2/device/new"
+// registrationAPI moved off my.remarkable.com (which now 405s on this route)
+// to webapp-prod.cloud.remarkable.engineering — see ddvk/rmapi commit
+// b41e13a ("fix auth url", 2022); we're pinned to that fork (v0.0.34) but
+// this is our own independent client and hadn't picked up the host change.
+const registrationAPI = "https://webapp-prod.cloud.remarkable.engineering/token/json/2/device/new"
 
 // Server is the registration HTTP server.
 type Server struct {
