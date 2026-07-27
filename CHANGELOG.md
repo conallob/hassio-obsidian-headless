@@ -1,3 +1,11 @@
+## 0.0.18
+
+## What's Changed
+* fix: avoid shelling out to rmapi on every unregistered request by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/30
+
+
+**Full Changelog**: https://github.com/conallob/hassio-obsidian-headless/compare/v0.0.17...v0.0.18
+
 ## 0.0.17
 
 ## What's Changed
