@@ -1,3 +1,11 @@
+## 0.0.15
+
+## What's Changed
+* fix: reMarkable auth/registration API moved off my.remarkable.com by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/24
+
+
+**Full Changelog**: https://github.com/conallob/hassio-obsidian-headless/compare/v0.0.14...v0.0.15
+
 ## 0.0.14
 
 ## What's Changed
