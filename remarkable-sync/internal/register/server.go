@@ -300,10 +300,21 @@ func registerDevice(code string) (string, error) {
 }
 
 func saveToken(tokenPath, token string) error {
-	if err := os.MkdirAll(filepath.Dir(tokenPath), 0o755); err != nil {
-		return err
+	dir := filepath.Dir(tokenPath)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("create %s: %w", dir, err)
 	}
-	return os.WriteFile(tokenPath, []byte(token), 0o600)
+	if err := os.WriteFile(tokenPath, []byte(token), 0o600); err != nil {
+		return fmt.Errorf("write %s: %w", tokenPath, err)
+	}
+	// Read back and verify — catches silent overlay/permission mismatches
+	// where the write call returns no error but the file isn't actually there.
+	info, err := os.Stat(tokenPath)
+	if err != nil {
+		return fmt.Errorf("verify %s after write: %w", tokenPath, err)
+	}
+	log.Printf("Token file written: %s (%d bytes)", tokenPath, info.Size())
+	return nil
 }
 
 func renderError(w http.ResponseWriter, msg string) {

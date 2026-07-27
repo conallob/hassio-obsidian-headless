@@ -64,6 +64,11 @@ func main() {
 	if err := os.MkdirAll(*cacheDir, 0o755); err != nil {
 		log.Fatalf("cannot create cache dir %s: %v", *cacheDir, err)
 	}
+	if abs, err := filepath.Abs(*cacheDir); err == nil {
+		log.Printf("Cache directory ready: %s", abs)
+	} else {
+		log.Printf("Cache directory ready: %s", *cacheDir)
+	}
 
 	tokenFilePath := filepath.Join(*cacheDir, "device.token")
 
