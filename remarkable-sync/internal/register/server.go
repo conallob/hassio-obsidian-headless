@@ -254,10 +254,15 @@ type registrationRequest struct {
 	DeviceID   string `json:"deviceID"`
 }
 
+// deviceDesc must match a value reMarkable's backend recognizes.
+// "desktop-linux" is what ddvk/rmapi's current (non-legacy) code sends;
+// its legacy/dead code path used "desktop-windows", which we'd copied.
+const deviceDesc = "desktop-linux"
+
 func registerDevice(code string) (string, error) {
 	payload := registrationRequest{
 		Code:       code,
-		DeviceDesc: "desktop-windows",
+		DeviceDesc: deviceDesc,
 		DeviceID:   uuid.New().String(),
 	}
 	body, err := json.Marshal(payload)
@@ -283,6 +288,7 @@ func registerDevice(code string) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer")
+	req.Header.Set("User-Agent", "rmapi")
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("registration API: %w", err)

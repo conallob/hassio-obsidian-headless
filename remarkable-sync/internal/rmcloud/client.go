@@ -21,6 +21,11 @@ const (
 	authURL = "https://webapp-prod.cloud.remarkable.engineering/token/json/2/user/new"
 	// docsBase is the document storage service root.
 	docsBase = "https://document-storage-production-dot-remarkable-production.appspot.com"
+	// userAgent matches ddvk/rmapi's identifier. Go's default http.Client sends
+	// "Go-http-client/1.1" if unset; rmapi always sets this explicitly on every
+	// request, so we match it in case reMarkable's Cloudflare front-end treats
+	// unrecognized user agents differently on any endpoint.
+	userAgent = "rmapi"
 )
 
 // Document represents a reMarkable cloud document or collection.
@@ -72,6 +77,7 @@ func (c *Client) Authenticate() error {
 		return err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.deviceToken)
+	req.Header.Set("User-Agent", userAgent)
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return fmt.Errorf("auth request: %w", err)
@@ -97,6 +103,7 @@ func (c *Client) ListDocuments(withBlob bool) ([]Document, error) {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.userToken)
+	req.Header.Set("User-Agent", userAgent)
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("list documents: %w", err)
@@ -115,7 +122,12 @@ func (c *Client) ListDocuments(withBlob bool) ([]Document, error) {
 
 // DownloadBlob fetches the raw ZIP blob for a document from its pre-signed URL.
 func (c *Client) DownloadBlob(blobURL string) ([]byte, error) {
-	resp, err := c.http.Get(blobURL)
+	req, err := http.NewRequest(http.MethodGet, blobURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", userAgent)
+	resp, err := c.http.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("download blob: %w", err)
 	}
