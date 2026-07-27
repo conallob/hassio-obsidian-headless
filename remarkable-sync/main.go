@@ -236,9 +236,9 @@ type blobMetadata struct {
 
 // rmContent mirrors the fields we care about in reMarkable's .content JSON.
 type rmContent struct {
-	FileType  string   `json:"fileType"`
-	PageCount int      `json:"pageCount"`
-	Tags      []rmTag  `json:"tags"`
+	FileType  string  `json:"fileType"`
+	PageCount int     `json:"pageCount"`
+	Tags      []rmTag `json:"tags"`
 }
 
 type rmTag struct {
