@@ -179,24 +179,27 @@ Obsidian vault. This is a **one-way sync**: reMarkable → Obsidian.
 
 ### Step 1: Register your device
 
+Device registration and cloud sync are both handled by [`rmapi`](https://github.com/ddvk/rmapi),
+the actively-maintained reMarkable Cloud CLI this add-on wraps — the same
+pattern used for `obsidian-headless` and `obsidian-web-mcp`. There is no
+device-token config field; `rmapi` manages its own credentials.
+
 The add-on always serves a registration UI at **`http://<your-ha-ip>:8421/`**.
 You do not need `enable_remarkable: true` to use this page — registration is
 always available so you can pair your device before enabling sync.
 
 1. Open that URL in your browser
-2. Enter the 8-character code from the step below and submit
-3. The device token is saved to `/data/remarkable-sync/device.token` and reused
-   across restarts
+2. Enter the 8-character code from the step below and submit — this is piped
+   directly to `rmapi`, which completes registration and saves its own
+   credentials to `/data/rmapi/`
 
 **To get your pairing code:**
 - Go to `https://my.remarkable.com/device/desktop/new`
 - Click the **Tablet** tab
 - Copy the 8-character lowercase code shown (e.g. `xxxxxxxx`) — it expires in ~5 minutes
 
-If no token is saved yet, the sync loop waits silently until one is provided —
-no crash or restart loop. The saved token is stored as `remarkable_device_token`
-internally; you can also set it explicitly in the add-on configuration to skip
-the registration UI.
+If no device is registered yet, the sync loop waits silently until one is —
+no crash or restart loop.
 
 ### What gets synced
 

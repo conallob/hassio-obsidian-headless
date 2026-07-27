@@ -6,43 +6,32 @@
 //  2. The page links to https://my.remarkable.com/device/desktop/new where
 //     reMarkable shows an 8-character alphanumeric one-time code (e.g. "bufjmbgl").
 //  3. User enters the code into the form and submits.
-//  4. The server calls the reMarkable registration API, receives a device token,
-//     and writes it to tokenPath.
-//  5. The confirmation page tells the user the token is saved — they can restart
-//     the add-on and remove the code from the UI.
+//  4. The server pipes the code to the rmapi CLI, which completes device
+//     registration and persists its own device/user tokens to its config
+//     file (RMAPI_CONFIG). We don't handle tokens ourselves at all.
+//  5. The confirmation page tells the user registration is done — they can
+//     restart the add-on and remove the code from the UI.
 package register
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
 	"html/template"
-	"io"
-	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
+	"remarkable-sync/internal/rmapicli"
 )
-
-// registrationAPI moved off my.remarkable.com (which now 405s on this route)
-// to webapp-prod.cloud.remarkable.engineering — see ddvk/rmapi commit
-// b41e13a ("fix auth url", 2022); we're pinned to that fork (v0.0.34) but
-// this is our own independent client and hadn't picked up the host change.
-const registrationAPI = "https://webapp-prod.cloud.remarkable.engineering/token/json/2/device/new"
 
 // Server is the registration HTTP server.
 type Server struct {
-	tokenPath string
-	mux       *http.ServeMux
+	mux *http.ServeMux
 }
 
-// New creates a Server that will save the device token to tokenPath.
-func New(tokenPath string) *Server {
-	s := &Server{tokenPath: tokenPath, mux: http.NewServeMux()}
+// New creates a registration Server.
+func New() *Server {
+	s := &Server{mux: http.NewServeMux()}
 	s.mux.HandleFunc("/", s.handleIndex)
 	s.mux.HandleFunc("/register", s.handleRegister)
 	s.mux.HandleFunc("/status", s.handleStatus)
@@ -58,18 +47,6 @@ func (s *Server) ListenAndServe(addr string) error {
 		WriteTimeout: 30 * time.Second,
 	}
 	return srv.ListenAndServe()
-}
-
-// TokenPath returns the path where the device token is saved.
-func (s *Server) TokenPath() string { return s.tokenPath }
-
-// ReadSavedToken returns the saved device token, or empty string if not yet registered.
-func ReadSavedToken(tokenPath string) string {
-	data, err := os.ReadFile(tokenPath)
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(data))
 }
 
 var indexTmpl = template.Must(template.New("index").Parse(`<!DOCTYPE html>
@@ -105,7 +82,7 @@ var indexTmpl = template.Must(template.New("index").Parse(`<!DOCTYPE html>
 
 {{if .AlreadyRegistered}}
 <div class="status already">
-  ✓ A device token is already saved. The sync service is using it.
+  ✓ This device is already registered. The sync service is using it.
   You can re-register below to replace it.
 </div>
 {{end}}
@@ -145,7 +122,7 @@ var indexTmpl = template.Must(template.New("index").Parse(`<!DOCTYPE html>
   <div class="step-body">
     <strong>Restart the add-on</strong><br>
     <span style="color:#666;font-size:.9rem">
-      After successful registration the token is saved automatically.
+      After successful registration the sync service picks it up automatically.
       Restart the add-on — no config changes needed.
     </span>
   </div>
@@ -169,8 +146,8 @@ var successTmpl = template.Must(template.New("success").Parse(`<!DOCTYPE html>
 <body>
 <h1>✓ Device registered successfully</h1>
 <div class="status">
-  The device token has been saved to <code>{{.TokenPath}}</code>.
-  The sync service will use it on the next restart.
+  rmapi has saved its device credentials. The sync service will use them on
+  the next restart.
 </div>
 <p>You can now <strong>restart the add-on</strong> from the Home Assistant UI.</p>
 <p><a href="/">← Back</a></p>
@@ -203,7 +180,7 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data := struct{ AlreadyRegistered bool }{
-		AlreadyRegistered: ReadSavedToken(s.tokenPath) != "",
+		AlreadyRegistered: rmapicli.IsAuthenticated(r.Context()),
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_ = indexTmpl.Execute(w, data)
@@ -224,86 +201,21 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := registerDevice(code)
-	if err != nil {
-		log.Printf("registration failed: %v", err)
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+	if err := rmapicli.Register(ctx, code); err != nil {
 		renderError(w, fmt.Sprintf("Registration failed: %v", err))
 		return
 	}
 
-	if err := saveToken(s.tokenPath, token); err != nil {
-		log.Printf("could not save token: %v", err)
-		renderError(w, fmt.Sprintf("Could not save token: %v", err))
-		return
-	}
-
-	log.Printf("Device registered successfully; token saved to %s", s.tokenPath)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = successTmpl.Execute(w, struct{ TokenPath string }{TokenPath: s.tokenPath})
+	_ = successTmpl.Execute(w, nil)
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
-	registered := ReadSavedToken(s.tokenPath) != ""
+	registered := rmapicli.IsAuthenticated(r.Context())
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, `{"registered":%v}`, registered)
-}
-
-type registrationRequest struct {
-	Code       string `json:"code"`
-	DeviceDesc string `json:"deviceDesc"`
-	DeviceID   string `json:"deviceID"`
-}
-
-func registerDevice(code string) (string, error) {
-	payload := registrationRequest{
-		Code:       code,
-		DeviceDesc: "desktop-windows",
-		DeviceID:   uuid.New().String(),
-	}
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return "", err
-	}
-
-	// Use a custom client that preserves the POST method on redirects and
-	// sends Authorization: Bearer (empty token) as required by the reMarkable API.
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) > 0 {
-				req.Method = via[0].Method
-				req.Header = via[0].Header.Clone()
-			}
-			return nil
-		},
-	}
-	req, err := http.NewRequest(http.MethodPost, registrationAPI, bytes.NewReader(body))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer")
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("registration API: %w", err)
-	}
-	defer resp.Body.Close()
-	raw, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, bytes.TrimSpace(raw))
-	}
-	token := strings.TrimSpace(string(raw))
-	if token == "" {
-		return "", fmt.Errorf("empty token returned")
-	}
-	return token, nil
-}
-
-func saveToken(tokenPath, token string) error {
-	if err := os.MkdirAll(filepath.Dir(tokenPath), 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(tokenPath, []byte(token), 0o600)
 }
 
 func renderError(w http.ResponseWriter, msg string) {
