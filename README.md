@@ -69,35 +69,38 @@ It also ships two optional extras that take the vault further:
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│              Home Assistant Add-on                  │
-│                                                     │
-│  ┌─────────────────┐   ┌──────────────────────────┐ │
-│  │  obsidian-sync  │   │   remarkable-sync (Go)   │ │
-│  │  (s6 service)   │   │   (s6 service)           │ │
-│  │                 │   │                          │ │
-│  │  ob sync        │   │  port 8421 — rM reg UI   │ │
-│  │  --continuous   │   │  port 8422 — token gen   │ │
-│  └────────┬────────┘   └────────────┬─────────────┘ │
-│           │                         │               │
-│           ▼                         ▼               │
-│    /share/obsidian-vault  ◄──── reMarkable Cloud    │
-│           │                                         │
-│           ▼                                         │
-│  ┌─────────────────┐                                │
-│  │ obsidian-mcp-   │                                │
-│  │ server          │  port 8420                     │
-│  │ (s6 service)    │──────────────► MCP clients     │
-│  └─────────────────┘   (Tailscale / HTTPS / local)  │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                Home Assistant Add-on                    │
+│                                                          │
+│  ┌─────────────────┐   ┌───────────────────────────┐    │
+│  │  obsidian-sync  │   │   remarkable-sync (Go)    │    │
+│  │  (s6 service)   │   │   (s6 service)             │    │
+│  │                 │   │  port 8421 — rM reg UI     │    │
+│  │  ob sync        │   │  port 8422 — token gen     │    │
+│  │  --continuous   │   │  shells out to rmapi (CLI) │    │
+│  └────────┬────────┘   └──────────────┬─────────────┘    │
+│           │                           ▼                  │
+│           │                    ┌────────────┐            │
+│           │                    │   rmapi    │──► reMarkable
+│           │                    └─────┬──────┘     Cloud  │
+│           ▼                          ▼                   │
+│    /share/obsidian-vault  ◄── .rmdoc bundles →            │
+│           │                  Markdown + PDF + OCR         │
+│           ▼                                               │
+│  ┌─────────────────┐                                      │
+│  │ obsidian-mcp-   │                                      │
+│  │ server          │  port 8420                           │
+│  │ (s6 service)    │──────────────► MCP clients           │
+│  └─────────────────┘   (Tailscale / HTTPS / local)        │
+└─────────────────────────────────────────────────────────┘
 ```
 
 | Component | Role |
 |---|---|
 | [`obsidian-headless`](https://www.npmjs.com/package/obsidian-headless) | Official Obsidian Sync CLI |
 | [`obsidian-web-mcp`](https://github.com/jimprosser/obsidian-web-mcp) | Third-party Python MCP HTTP server (vault search, indexing, MCP protocol) — this add-on packages it, it is not our own implementation |
-| [`remarkable-sync`](remarkable-sync/) | Go binary — reMarkable Cloud → Obsidian |
-| [`rmapi`](https://github.com/ddvk/rmapi) | reMarkable Cloud API client (built from source) |
+| [`remarkable-sync`](remarkable-sync/) | Go binary — serves the pairing/registration UIs, converts synced `.rmdoc` bundles into Markdown notes with embedded PDFs/OCR. Delegates all reMarkable Cloud communication to `rmapi` rather than talking to the API directly |
+| [`rmapi`](https://github.com/ddvk/rmapi) | Third-party reMarkable Cloud CLI (built from source) — `remarkable-sync` shells out to it for device registration and document sync, the same pattern used for `obsidian-headless`/`obsidian-web-mcp` |
 
 > **Why Python for the MCP server?** `obsidian-web-mcp` already implements the
 > MCP protocol, vault search/indexing, and OAuth 2.1 — building our own from
