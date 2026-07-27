@@ -10,8 +10,17 @@
 if bashio::config.true "enable_remarkable"; then
     export REMARKABLE_SYNC_ENABLED="true"
 
-    REMARKABLE_DEVICE_TOKEN="$(bashio::config 'remarkable_device_token')"
-    export REMARKABLE_DEVICE_TOKEN
+    # bashio::config prints the literal string "null" (not empty) for an
+    # unset str?/password? option — guard with has_value so
+    # REMARKABLE_DEVICE_TOKEN stays genuinely unset when the option isn't
+    # configured. Without this, main.go's env(key, "") sees the non-empty
+    # string "null" and never falls back to reading the saved token file
+    # from the browser-based registration UI, so pairing via port 8421
+    # appeared to work but the sync loop kept using "null" as the token
+    # forever (HTTP 401: invalid Authorization header).
+    if bashio::config.has_value "remarkable_device_token"; then
+        export REMARKABLE_DEVICE_TOKEN="$(bashio::config 'remarkable_device_token')"
+    fi
 
     REMARKABLE_OUTPUT_DIR="$(bashio::config 'remarkable_output_dir')"
     export REMARKABLE_OUTPUT_DIR="${REMARKABLE_OUTPUT_DIR:-reMarkable}"
