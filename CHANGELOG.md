@@ -1,3 +1,11 @@
+## 0.0.16
+
+## What's Changed
+* fix: guard remarkable_device_token config read with bashio::config.has_value by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/25
+
+
+**Full Changelog**: https://github.com/conallob/hassio-obsidian-headless/compare/v0.0.15...v0.0.16
+
 ## 0.0.15
 
 ## What's Changed
