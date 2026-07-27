@@ -10,12 +10,29 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
 const binary = "rmapi"
+
+// configPath returns the path rmapi reads/writes its device+user tokens to.
+// Mirrors rmapi's own resolution order (RMAPI_CONFIG env var, then ~/.rmapi)
+// closely enough for an existence check — this add-on always sets
+// RMAPI_CONFIG explicitly (build-env.sh), so the fallback rarely matters.
+func configPath() string {
+	if p := os.Getenv("RMAPI_CONFIG"); p != "" {
+		return p
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".rmapi")
+}
 
 // Register pipes a one-time pairing code to rmapi, completing device
 // registration. rmapi reads the code as a single newline-terminated line on
@@ -32,9 +49,20 @@ func Register(ctx context.Context, code string) error {
 	return nil
 }
 
-// IsAuthenticated reports whether rmapi already has a usable device token by
-// running a lightweight, read-only command and checking its exit status.
+// IsAuthenticated reports whether rmapi already has a usable device token.
+//
+// Checks for the config file first rather than always shelling out: with no
+// device token, `rmapi ls` falls into rmapi's interactive one-time-code
+// prompt, reading from stdin — which we deliberately don't supply here (it
+// defaults to /dev/null) — and depending on how rmapi handles that EOF, the
+// process can retry for the full context timeout before giving up. Calling
+// this from an HTTP handler (as the registration UI does, on every page
+// load) made the whole page hang for up to 30s while unregistered, which is
+// indistinguishable from the server not listening at all.
 func IsAuthenticated(ctx context.Context) bool {
+	if _, err := os.Stat(configPath()); err != nil {
+		return false
+	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, binary, "ls")
