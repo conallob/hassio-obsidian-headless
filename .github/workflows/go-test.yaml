@@ -1,0 +1,45 @@
+name: Go Test
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "remarkable-sync/**"
+      - ".github/workflows/go-test.yaml"
+
+jobs:
+  test:
+    name: Build, vet, and test remarkable-sync
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: remarkable-sync/go.mod
+
+      - name: Build
+        working-directory: remarkable-sync
+        run: go build ./...
+
+      - name: Vet
+        working-directory: remarkable-sync
+        run: go vet ./...
+
+      - name: Check gofmt
+        working-directory: remarkable-sync
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "${unformatted}" ]; then
+            echo "The following files are not gofmt-formatted:"
+            echo "${unformatted}"
+            exit 1
+          fi
+
+      - name: Test
+        working-directory: remarkable-sync
+        run: go test -v ./...
