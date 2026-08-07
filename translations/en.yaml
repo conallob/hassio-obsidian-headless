@@ -75,6 +75,17 @@ configuration:
     description: >-
       How often to poll reMarkable Cloud for new/updated documents, in
       seconds. Default: 300.
+  remarkable_tag_prefix:
+    name: reMarkable Tag Prefix
+    description: >-
+      Prepended to every reMarkable label mapped to an Obsidian tag, e.g.
+      'remarkable:' turns the label 'mylabel' into 'remarkable:mylabel'.
+      Leave blank to overlay reMarkable labels into Obsidian tags unchanged.
+  remarkable_extra_tags:
+    name: reMarkable Extra Tags
+    description: >-
+      Comma-separated tags added to every document synced from reMarkable,
+      in addition to its own labels. Example: 'remarkable'.
 
 network:
   8420/tcp: MCP HTTP server port

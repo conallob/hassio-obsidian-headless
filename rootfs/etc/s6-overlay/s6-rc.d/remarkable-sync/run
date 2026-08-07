@@ -13,6 +13,13 @@ if bashio::config.true "enable_remarkable"; then
     REMARKABLE_OUTPUT_DIR="$(bashio::config 'remarkable_output_dir')"
     export REMARKABLE_OUTPUT_DIR="${REMARKABLE_OUTPUT_DIR:-reMarkable}"
 
+    if bashio::config.has_value "remarkable_tag_prefix"; then
+        export REMARKABLE_TAG_PREFIX="$(bashio::config 'remarkable_tag_prefix')"
+    fi
+    if bashio::config.has_value "remarkable_extra_tags"; then
+        export REMARKABLE_EXTRA_TAGS="$(bashio::config 'remarkable_extra_tags')"
+    fi
+
     if bashio::config.has_value "ha_ocr_url"; then
         export HA_OCR_URL="$(bashio::config 'ha_ocr_url')"
     fi

@@ -221,6 +221,19 @@ whose cloud version has changed are re-downloaded (cached in `/data/remarkable-s
 Documents are checked every `remarkable_sync_interval` seconds (default: 300).
 The vault sub-directory can be changed with `remarkable_output_dir` (default: `reMarkable`).
 
+### Label mapping
+
+reMarkable labels on a document become Obsidian tags in the note's front-matter.
+Two options control how:
+
+| Option | Description |
+|---|---|
+| `remarkable_tag_prefix` | Prepended to every reMarkable label. E.g. `"remarkable:"` turns the label `mylabel` into the Obsidian tag `remarkable:mylabel`. Leave blank (default) to overlay reMarkable labels into Obsidian tags unchanged. |
+| `remarkable_extra_tags` | Comma-separated tags added to **every** document synced from reMarkable, regardless of its own labels — e.g. `remarkable` to mark all synced notes for easy filtering in Obsidian. |
+
+Both can be combined: with `remarkable_tag_prefix: "rm:"` and `remarkable_extra_tags: "remarkable"`,
+a document labelled `work` gets the tags `rm:work` and `remarkable`.
+
 ### Optional: OCR for handwritten notebooks
 
 Handwritten notebooks are synced as stub notes by default. To transcribe them,
