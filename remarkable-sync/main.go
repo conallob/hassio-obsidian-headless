@@ -22,6 +22,12 @@
 //	VAULT_PATH               Obsidian vault root (required)
 //	REMARKABLE_OUTPUT_DIR    sub-directory within vault (default: reMarkable)
 //	REMARKABLE_CACHE_DIR     rmapi mirror + stamp cache (default: /data/remarkable-sync)
+//	REMARKABLE_TAG_PREFIX    prepended to every reMarkable label when mapped to an
+//	                         Obsidian tag (e.g. "remarkable:" turns "mylabel" into
+//	                         "remarkable:mylabel"). Empty (default): labels are
+//	                         overlaid into Obsidian tags unchanged.
+//	REMARKABLE_EXTRA_TAGS    comma-separated tags added to every synced document,
+//	                         in addition to its own reMarkable labels (optional)
 //	HA_OCR_URL               HA OCR endpoint URL (optional)
 //	HA_OCR_TOKEN             HA long-lived access token (optional)
 //	HA_OCR_ENTITY            HA entity_id for image_processing (optional)
@@ -56,6 +62,8 @@ func main() {
 	haOCRURL := flag.String("ha-ocr-url", env("HA_OCR_URL", ""), "Home Assistant OCR endpoint URL (optional)")
 	haOCRToken := flag.String("ha-ocr-token", env("HA_OCR_TOKEN", ""), "Home Assistant long-lived access token")
 	haOCREntity := flag.String("ha-ocr-entity", env("HA_OCR_ENTITY", ""), "Home Assistant image_processing entity_id")
+	tagPrefix := flag.String("tag-prefix", env("REMARKABLE_TAG_PREFIX", ""), "prefix applied to every reMarkable label mapped to an Obsidian tag (e.g. \"remarkable:\"); empty overlays labels unchanged")
+	extraTagsRaw := flag.String("extra-tags", env("REMARKABLE_EXTRA_TAGS", ""), "comma-separated tags added to every synced document")
 	continuous := flag.Bool("continuous", env("REMARKABLE_SYNC_ENABLED", "false") == "true", "run continuously (respects SYNC_INTERVAL)")
 	intervalSec := flag.Int("interval", envInt("SYNC_INTERVAL", 300), "seconds between syncs in continuous mode")
 	registerPort := flag.String("register-port", env("REMARKABLE_REGISTER_PORT", "8421"), "port for the reMarkable device registration web UI")
@@ -123,20 +131,58 @@ func main() {
 	}
 
 	destRoot := filepath.Join(*vaultPath, *outputDir)
+	extraTags := splitTags(*extraTagsRaw)
 
 	if *continuous {
 		log.Printf("Starting continuous sync every %ds", *intervalSec)
 		for {
-			if err := runSync(mirrorDir, stampDir, destRoot, ocrClient); err != nil {
+			if err := runSync(mirrorDir, stampDir, destRoot, ocrClient, *tagPrefix, extraTags); err != nil {
 				log.Printf("sync error: %v", err)
 			}
 			time.Sleep(time.Duration(*intervalSec) * time.Second)
 		}
 	} else {
-		if err := runSync(mirrorDir, stampDir, destRoot, ocrClient); err != nil {
+		if err := runSync(mirrorDir, stampDir, destRoot, ocrClient, *tagPrefix, extraTags); err != nil {
 			log.Fatalf("sync failed: %v", err)
 		}
 	}
+}
+
+// splitTags parses a comma-separated tag list, trimming whitespace and
+// dropping empty entries.
+func splitTags(raw string) []string {
+	if raw == "" {
+		return nil
+	}
+	var tags []string
+	for _, t := range strings.Split(raw, ",") {
+		if t = strings.TrimSpace(t); t != "" {
+			tags = append(tags, t)
+		}
+	}
+	return tags
+}
+
+// mapTags applies the configured label prefix to each reMarkable tag (if
+// set — otherwise tags are overlaid into Obsidian unchanged) and appends any
+// extra tags configured to apply to every synced document, deduplicating.
+func mapTags(tags []string, prefix string, extraTags []string) []string {
+	seen := make(map[string]bool, len(tags)+len(extraTags))
+	var out []string
+	add := func(t string) {
+		if t == "" || seen[t] {
+			return
+		}
+		seen[t] = true
+		out = append(out, t)
+	}
+	for _, t := range tags {
+		add(prefix + t)
+	}
+	for _, t := range extraTags {
+		add(t)
+	}
+	return out
 }
 
 // docSummary describes one synced document for the vault-root index.
@@ -146,7 +192,7 @@ type docSummary struct {
 	Modified time.Time
 }
 
-func runSync(mirrorDir, stampDir, destRoot string, ocrClient *ocr.Client) error {
+func runSync(mirrorDir, stampDir, destRoot string, ocrClient *ocr.Client, tagPrefix string, extraTags []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 	if err := rmapicli.SyncTree(ctx, "/", mirrorDir); err != nil {
@@ -168,7 +214,7 @@ func runSync(mirrorDir, stampDir, destRoot string, ocrClient *ocr.Client) error 
 		}
 		relPath = strings.TrimSuffix(relPath, filepath.Ext(relPath))
 
-		changed, summary, err := syncDocument(path, relPath, stampDir, destRoot, ocrClient)
+		changed, summary, err := syncDocument(path, relPath, stampDir, destRoot, ocrClient, tagPrefix, extraTags)
 		if err != nil {
 			log.Printf("skip %q: %v", relPath, err)
 			return nil
@@ -196,7 +242,7 @@ func runSync(mirrorDir, stampDir, destRoot string, ocrClient *ocr.Client) error 
 // syncDocument writes (or updates) the markdown note and embedded PDF for a
 // single .rmdoc bundle already fetched by rmapi at mirrorPath. Returns true
 // if the note was (re)written, i.e. the mirrored file changed since last run.
-func syncDocument(mirrorPath, relPath, stampDir, destRoot string, ocrClient *ocr.Client) (bool, docSummary, error) {
+func syncDocument(mirrorPath, relPath, stampDir, destRoot string, ocrClient *ocr.Client, tagPrefix string, extraTags []string) (bool, docSummary, error) {
 	title := filepath.Base(relPath)
 
 	info, err := os.Stat(mirrorPath)
@@ -238,6 +284,7 @@ func syncDocument(mirrorPath, relPath, stampDir, destRoot string, ocrClient *ocr
 		title = meta.VisibleName
 		summary.Title = title
 	}
+	meta.Tags = mapTags(meta.Tags, tagPrefix, extraTags)
 
 	if len(meta.PDF) > 0 {
 		pdfPath := filepath.Join(destRoot, relPath+".pdf")

@@ -79,6 +79,16 @@ options:
   # How often to poll for new/updated documents (seconds).
   remarkable_sync_interval: 300
 
+  # Prefix applied to every reMarkable label when mapped to an Obsidian tag,
+  # e.g. "remarkable:" turns the reMarkable label "mylabel" into the Obsidian
+  # tag "remarkable:mylabel". Leave blank to overlay reMarkable labels into
+  # Obsidian tags unchanged.
+  remarkable_tag_prefix: ""
+
+  # Comma-separated tags added to every document synced from reMarkable, in
+  # addition to its own labels — e.g. "remarkable" to mark all synced notes.
+  remarkable_extra_tags: ""
+
   # --- Home Assistant OCR (optional, for handwritten notebooks) ---
   # Full URL to a HA webhook or REST endpoint that accepts
   # {"image": "<base64-encoded PNG>"} and returns {"text": "..."}.
@@ -106,6 +116,8 @@ schema:
   enable_remarkable: bool
   remarkable_output_dir: str?
   remarkable_sync_interval: int?
+  remarkable_tag_prefix: str?
+  remarkable_extra_tags: str?
   ha_ocr_url: str?
   ha_ocr_token: password?
   ha_ocr_entity: str?
