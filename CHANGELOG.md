@@ -1,3 +1,14 @@
+## 0.0.19
+
+## What's Changed
+* docs: fix README architecture diagram/table for rmapi-based reMarkable sync by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/31
+* feat: map reMarkable labels to Obsidian tags, with prefix and extra tags by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/32
+* test: add unit tests for tag mapping and note rendering by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/33
+* test: add hermetic end-to-end sync test and Go test CI workflow by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/35
+
+
+**Full Changelog**: https://github.com/conallob/hassio-obsidian-headless/compare/v0.0.18...v0.0.19
+
 ## 0.0.18
 
 ## What's Changed
