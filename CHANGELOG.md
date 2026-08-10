@@ -1,3 +1,11 @@
+## 0.0.20
+
+## What's Changed
+* fix: pin mcp SDK below v2.0.0 to fix obsidian-web-mcp import failure by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/36
+
+
+**Full Changelog**: https://github.com/conallob/hassio-obsidian-headless/compare/v0.0.19...v0.0.20
+
 ## 0.0.19
 
 ## What's Changed
