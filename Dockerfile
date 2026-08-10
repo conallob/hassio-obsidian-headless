@@ -40,8 +40,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends git build-essen
 # Pin to HEAD of main; update the commit hash when bumping the dependency
 RUN git clone --depth 1 https://github.com/jimprosser/obsidian-web-mcp.git .
 
-# Install into /install so we can COPY it cleanly into the final image
-RUN pip install --no-cache-dir --prefix=/install .
+# obsidian-web-mcp's pyproject.toml declares an unbounded "mcp[cli]>=1.9.0" —
+# the official MCP Python SDK released a breaking v2.0.0 (2026-07-28) that
+# renamed FastMCP to MCPServer and moved its module, so an unconstrained
+# `pip install` here silently starts pulling v2 and breaks at import time
+# ("No module named 'mcp.server.fastmcp'") with no change on our end at all.
+# Pin below v2 explicitly until obsidian-web-mcp migrates to the new API.
+RUN pip install --no-cache-dir --prefix=/install "mcp[cli]>=1.9.0,<2.0.0" .
 
 
 # Stage 2: Final HA add-on image
