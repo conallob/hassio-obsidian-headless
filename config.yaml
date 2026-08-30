@@ -56,9 +56,18 @@ options:
   oauth_client_secret: ~
 
   # --- Tunnel mode (only relevant when enable_mcp is true) ---
-  # "none"      — port 8420 exposed directly (use HA firewall / VPN)
-  # "tailscale" — add-on joins your tailnet; port not needed externally
-  # "https"     — set tls_cert_path/tls_key_path; add-on expects a reverse proxy
+  # "none"       — port 8420 exposed directly (use HA firewall / VPN)
+  # "tailscale"  — add-on joins your tailnet; port not needed externally.
+  #                Requires oauth_client_secret (real OAuth 2.1, not just a
+  #                shared bearer secret) since Tailscale itself only proves
+  #                network membership, not identity.
+  # "https"      — set tls_cert_path/tls_key_path; add-on expects a reverse proxy
+  # "cloudflare" — traffic arrives via a Cloudflare Tunnel managed by the
+  #                separate cloudflared add-on; this add-on does not run any
+  #                tunnel client itself. Requires oauth_client_secret — pair
+  #                with Cloudflare Access "Managed OAuth" and an identity
+  #                provider (e.g. Google) in front of the tunnel hostname for
+  #                real per-user authentication. See DOCS.md.
   tunnel_mode: "none"
 
   # Tailscale options (only if tunnel_mode = tailscale)
@@ -109,7 +118,7 @@ schema:
   mcp_auth_token: password?
   oauth_client_id: str?
   oauth_client_secret: password?
-  tunnel_mode: "list(none|tailscale|https)"
+  tunnel_mode: "list(none|tailscale|https|cloudflare)"
   tailscale_auth_key: password?
   tls_cert_path: str?
   tls_key_path: str?

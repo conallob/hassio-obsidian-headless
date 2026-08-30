@@ -156,11 +156,18 @@ At least one of these must be set:
 
 ### Tunnel mode (`tunnel_mode`)
 
-| Value | Description |
-|---|---|
-| `none` (default) | Port 8420 on your local network only |
-| `tailscale` | Add-on joins your tailnet; set `tailscale_auth_key` |
-| `https` | Expects an external reverse proxy; set `tls_cert_path` / `tls_key_path` |
+| Value | Description | Auth requirement |
+|---|---|---|
+| `none` (default) | Port 8420 on your local network only | None required (warns if unset) |
+| `tailscale` | Add-on joins your tailnet; set `tailscale_auth_key` | **`oauth_client_secret` required** |
+| `https` | Expects an external reverse proxy; set `tls_cert_path` / `tls_key_path` | `mcp_auth_token` or `oauth_client_secret` |
+| `cloudflare` | Traffic arrives via a Cloudflare Tunnel — see below | **`oauth_client_secret` required** |
+
+`tailscale` and `cloudflare` require `oauth_client_secret` specifically, not just any
+credential. Tailscale network membership and "this request came through the Cloudflare
+Tunnel" both prove *where* a request came from, not *who* sent it — a shared bearer
+token doesn't add real identity on top of that. Pair OAuth mode with Tailscale's own
+identity-aware ACLs, or (for `cloudflare`) Cloudflare Access, for actual per-user auth.
 
 > **Note on Home Assistant Ingress**: this add-on does not use HA's built-in
 > ingress panel for the MCP server. HA ingress authenticates the *browser* (via
@@ -168,13 +175,42 @@ At least one of these must be set:
 > supply the vault's own `mcp_auth_token`/OAuth credential to a downstream
 > service — a remote MCP client can only send one `Authorization` header, and
 > HA's own auth and this add-on's auth are deliberately separate secrets. Use
-> `tunnel_mode: tailscale` or `https` for authenticated remote access instead.
+> `tunnel_mode: tailscale`, `https`, or `cloudflare` for authenticated remote
+> access instead.
+
+### Cloudflare Tunnel (`tunnel_mode: cloudflare`)
+
+This add-on does **not** run a `cloudflared` client itself — tunnel connectivity is
+managed by a separate `cloudflared` add-on. Setting `tunnel_mode: cloudflare` here only
+affects auth validation (requiring `oauth_client_secret`); you still need to configure
+the tunnel and hostname routing in the `cloudflared` add-on/Cloudflare dashboard
+yourself, pointing the public hostname at `http://localhost:8420` on this add-on's host.
+
+**Recommended: gate the tunnel hostname with Cloudflare Access + an identity provider**
+so requests are authenticated by a real login, not just a shared secret:
+
+1. **Add an identity provider**: Zero Trust dashboard → **Settings → Authentication**,
+   add e.g. **Google** (works with any Google account, not just Workspace).
+2. **Create a self-hosted Access application** for your tunnel hostname: **Access
+   controls → Applications → Create new application → "Self-hosted and private"**.
+3. **Add an Allow policy** — e.g. rule type **Emails**, value = your specific address —
+   so only you pass.
+4. **Turn on Managed OAuth** (the application's **Advanced settings** tab). Without this,
+   a non-browser MCP client hits a plain `302` login redirect it can't follow. With it,
+   Access returns a `401` + `WWW-Authenticate` header pointing at its own OAuth discovery
+   endpoints (RFC 8414/9728), and the MCP client completes a real OAuth 2.0
+   authorization-code flow — opening your browser, logging you in via your identity
+   provider, and getting back a token for subsequent requests.
+
+With Access + Managed OAuth in front, you can rely on it as the sole gate and leave this
+add-on's own `oauth_client_secret` as a secondary layer, or keep both for defense in
+depth.
 
 ### Connecting Claude.ai
 
 In Claude.ai → Settings → Integrations → Add MCP Server:
 
-- **URL**: `http://<ha-ip>:8420/` (or your Tailscale/HTTPS URL)
+- **URL**: `http://<ha-ip>:8420/` (or your Tailscale/HTTPS/Cloudflare Tunnel URL)
 - **Auth**: Bearer token or OAuth 2.1 depending on what you configured above
 
 ---
