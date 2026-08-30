@@ -1,3 +1,11 @@
+## 0.0.21
+
+## What's Changed
+* feat: add cloudflare tunnel_mode, require OAuth for tailscale/cloudflare by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/37
+
+
+**Full Changelog**: https://github.com/conallob/hassio-obsidian-headless/compare/v0.0.20...v0.0.21
+
 ## 0.0.20
 
 ## What's Changed
