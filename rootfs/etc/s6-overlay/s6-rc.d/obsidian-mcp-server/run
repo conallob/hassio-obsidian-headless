@@ -1,6 +1,8 @@
 #!/usr/bin/with-contenv bashio
 # s6 service: obsidian-mcp
-# Runs obsidian-vault-mcp HTTP server, with optional Tailscale tunnel.
+# Runs obsidian-vault-mcp HTTP server, with optional Tailscale or Cloudflare
+# Tunnel exposure (cloudflare mode is config/validation-only — the actual
+# tunnel client runs in the separate cloudflared add-on).
 # Exits cleanly (oneshot-style) when enable_mcp is false so s6 does not restart it.
 
 . /usr/local/bin/build-env.sh
@@ -14,15 +16,33 @@ bashio::log.info "Starting Obsidian MCP server (tunnel: ${TUNNEL_MODE})"
 
 # --- Validate auth config ---
 # Unauthenticated access is only acceptable on a trusted local network
-# (tunnel_mode: none). Any external exposure — Tailscale or HTTPS reverse
-# proxy — requires at least one credential.
-if [ -z "${VAULT_MCP_TOKEN}" ] && [ -z "${VAULT_OAUTH_CLIENT_SECRET}" ]; then
-    if [ "${TUNNEL_MODE}" != "none" ]; then
-        bashio::log.fatal "mcp_auth_token or oauth_client_secret is required when tunnel_mode is not 'none'."
-        exec sleep inf
-    fi
-    bashio::log.warning "No MCP auth configured — port 8420 is unauthenticated. Only safe on a trusted local network."
-fi
+# (tunnel_mode: none). tunnel_mode: https accepts either a bearer token or
+# OAuth, since it's a generic reverse-proxy scenario. tunnel_mode: tailscale
+# and cloudflare specifically require oauth_client_secret (real OAuth 2.1,
+# not just a shared bearer secret) — Tailscale only proves network
+# membership, and Cloudflare Tunnel traffic only proves it passed through
+# the tunnel; neither proves who the caller is on its own. Pair oauth mode
+# with Tailscale's own identity-aware ACLs, or Cloudflare Access "Managed
+# OAuth" + an identity provider, for real per-user authentication.
+case "${TUNNEL_MODE}" in
+    tailscale|cloudflare)
+        if [ -z "${VAULT_OAUTH_CLIENT_SECRET}" ]; then
+            bashio::log.fatal "oauth_client_secret is required when tunnel_mode is '${TUNNEL_MODE}' — a bearer token alone is not enough for this mode."
+            exec sleep inf
+        fi
+        ;;
+    https)
+        if [ -z "${VAULT_MCP_TOKEN}" ] && [ -z "${VAULT_OAUTH_CLIENT_SECRET}" ]; then
+            bashio::log.fatal "mcp_auth_token or oauth_client_secret is required when tunnel_mode is 'https'."
+            exec sleep inf
+        fi
+        ;;
+    *)
+        if [ -z "${VAULT_MCP_TOKEN}" ] && [ -z "${VAULT_OAUTH_CLIENT_SECRET}" ]; then
+            bashio::log.warning "No MCP auth configured — port 8420 is unauthenticated. Only safe on a trusted local network."
+        fi
+        ;;
+esac
 
 # --- Tailscale setup ---
 if [ "${TUNNEL_MODE}" = "tailscale" ]; then
@@ -60,6 +80,18 @@ if [ "${TUNNEL_MODE}" = "https" ]; then
         exec sleep inf
     fi
     bashio::log.info "TLS mode: proxy your reverse-proxy to http://localhost:${VAULT_MCP_PORT}"
+fi
+
+# --- Cloudflare Tunnel (config-only) ---
+# This add-on does not run a cloudflared client itself — tunnel connectivity
+# is managed by the separate cloudflared add-on, which should be configured
+# to route its public hostname to http://localhost:${VAULT_MCP_PORT} inside
+# this container's network namespace (or to this add-on's host:port from
+# outside it, depending on how cloudflared is deployed). This mode only
+# affects auth validation above; see DOCS.md for the recommended Cloudflare
+# Access "Managed OAuth" + identity provider setup in front of the tunnel.
+if [ "${TUNNEL_MODE}" = "cloudflare" ]; then
+    bashio::log.info "Cloudflare tunnel mode: ensure the cloudflared add-on routes to http://localhost:${VAULT_MCP_PORT}"
 fi
 
 # --- Launch MCP server ---

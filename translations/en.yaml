@@ -40,8 +40,12 @@ configuration:
     description: >-
       How the MCP server is exposed externally.
       'none': only reachable on your local network (port 8420).
-      'tailscale': exposed on your Tailnet via Tailscale.
+      'tailscale': exposed on your Tailnet via Tailscale. Requires
+      oauth_client_secret.
       'https': expects an external reverse proxy terminating TLS.
+      'cloudflare': traffic arrives via a Cloudflare Tunnel managed by the
+      separate cloudflared add-on. Requires oauth_client_secret; pair with
+      Cloudflare Access for real per-user auth.
   tailscale_auth_key:
     name: Tailscale Auth Key
     description: >-

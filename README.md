@@ -28,7 +28,7 @@ times, without a dedicated machine or cloud dependency.
 It also ships two optional extras that take the vault further:
 
 - **An MCP server** so AI assistants like Claude can read and search your notes
-  from anywhere, over Tailscale or HTTPS.
+  from anywhere, over Tailscale, HTTPS, or a Cloudflare Tunnel.
 - **reMarkable Cloud sync** so your handwritten tablet notes flow automatically
   into Obsidian — a locally-hosted, zero-cost alternative to
   [Scrybble](https://scrybble.ink/).
@@ -51,7 +51,10 @@ It also ships two optional extras that take the vault further:
   [Model Context Protocol](https://modelcontextprotocol.io/) server
 - AI assistants (Claude, etc.) can read, search, and write your notes
 - Authentication: **Bearer token** and/or **OAuth 2.1**
-- Three tunnel modes: **local network**, **Tailscale**, or **HTTPS reverse proxy**
+- Four tunnel modes: **local network**, **Tailscale**, **HTTPS reverse proxy**, or
+  **Cloudflare Tunnel** (via the separate `cloudflared` add-on) — Tailscale and
+  Cloudflare modes require OAuth 2.1, since network-level access alone doesn't prove
+  identity
 
 ### reMarkable Cloud Sync (optional)
 - Syncs documents from your reMarkable tablet into Obsidian automatically
