@@ -293,6 +293,65 @@ with pages separated by `---`.
 
 ---
 
+## Optional: Git-Tracked Vault Subdirectories
+
+If part of your vault is itself a git repository on another device (e.g. a
+folder you `git clone`d on your Mac and edit directly in Obsidian), Obsidian
+Sync does not propagate the `.git/` metadata — the headless daemon here has
+no way to `git pull` a repo it was never given credentials for.
+
+Set `enable_git_sync: true` and list repos in `git_repos`, one per line:
+
+```
+<vault-relative-path>|<remote-url>[|<branch>]
+```
+
+Example:
+
+```
+Homelab|https://github.com/conallob/homelab.git
+Professional Artifacts|https://github.com/conallob/professional-artifacts.git|main
+```
+
+Branch defaults to `main` if omitted. Blank lines and lines starting with
+`#` are ignored.
+
+| Option | Description |
+|---|---|
+| `enable_git_sync` | Turn the periodic pull loop on |
+| `git_repos` | Repo list, one per line (see format above) |
+| `git_sync_interval` | Seconds between fetch/pull cycles (default: 900) |
+| `git_auth_token` | Fine-grained GitHub PAT (read-only, scoped to just the private repos you list) — only needed for private repos |
+
+### How it works
+
+The `.git` metadata for each repo lives **outside** the vault, at
+`/data/git-mirrors/<name>.git` — Obsidian Sync never sees it, so there's
+nothing for it to sync, exclude, or conflict on. The actual files stay
+ordinary vault content at `<vault>/<path>`, using
+[`git --git-dir=... --work-tree=...`](https://git-scm.com/docs/git#Documentation/git.txt---git-dirltpathgt),
+the standard technique for tracking a directory with git without a `.git`
+folder inside it.
+
+- **First run** adopts the existing directory: `git init` into the external
+  mirror, fetch, then `git reset --hard origin/<branch>`. This only touches
+  files tracked at that commit — any other files already in the folder (from
+  Obsidian Sync) are left alone.
+- **Subsequent runs** fetch and `git merge --ff-only`. If the vault copy has
+  diverged (e.g. you edited a tracked file via Obsidian on another device and
+  it doesn't fast-forward cleanly), the sync is **skipped** rather than
+  merging or overwriting — resolve it manually by `git`-ing into the mirror
+  directly with the same `--git-dir`/`--work-tree` flags.
+- The GitHub token, if set, is passed per-request as an HTTP auth header
+  (`git -c http.extraheader=...`) and is never written to the mirror's
+  on-disk git config.
+
+This is **poll-only** — repos are checked every `git_sync_interval` seconds,
+not pushed to on a webhook. If you need faster propagation, trigger a manual
+sync by restarting the add-on, or lower the interval.
+
+---
+
 ## Troubleshooting
 
 | Symptom | Fix |

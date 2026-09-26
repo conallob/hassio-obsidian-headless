@@ -90,6 +90,27 @@ configuration:
     description: >-
       Comma-separated tags added to every document synced from reMarkable,
       in addition to its own labels. Example: 'remarkable'.
+  enable_git_sync:
+    name: Enable Git Vault Sync
+    description: >-
+      Periodically pull git repos that live as subdirectories of the vault.
+      Obsidian Sync does not propagate .git metadata, so this fetches
+      directly from each repo's remote instead.
+  git_repos:
+    name: Git Repos
+    description: >-
+      One repo per line: '<vault-relative-path>|<remote-url>[|<branch>]'.
+      Branch defaults to 'main'. Example: 'Homelab|https://github.com/you/homelab.git'.
+  git_sync_interval:
+    name: Git Sync Interval (seconds)
+    description: >-
+      How often to fetch/pull all configured git_repos, in seconds.
+      Default: 900.
+  git_auth_token:
+    name: Git Auth Token
+    description: >-
+      Fine-grained GitHub personal access token, read-only, scoped to just
+      the private repos in git_repos. Not needed for public repos.
 
 network:
   8420/tcp: MCP HTTP server port
