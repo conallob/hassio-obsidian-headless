@@ -1,3 +1,11 @@
+## 0.0.22
+
+## What's Changed
+* feat: periodically pull git-tracked vault subdirectories by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/38
+
+
+**Full Changelog**: https://github.com/conallob/hassio-obsidian-headless/compare/v0.0.21...v0.0.22
+
 ## 0.0.21
 
 ## What's Changed
