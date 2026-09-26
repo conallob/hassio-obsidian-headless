@@ -1,0 +1,111 @@
+#!/usr/bin/with-contenv bashio
+# s6 service: vault-git-sync
+# Periodically pulls git repos that live as subdirectories of the Obsidian
+# vault, where the working-tree files are ordinary vault content (synced by
+# Obsidian Sync as usual) but the .git metadata lives OUTSIDE the vault in
+# /data/git-mirrors/ — Obsidian Sync never sees or touches it, and there's
+# nothing for it to sync/exclude/conflict on.
+#
+# Each configured repo is addressed with `git --git-dir=<mirror> --work-tree=
+# <vault-subdir>`, standard practice for tracking a directory with git
+# without a .git folder inside it.
+#
+# Currently poll-only (see git_sync_interval). A push-triggered variant
+# (e.g. a webhook called from each repo's own CI on merge, mirroring how the
+# separate Home-Assistant-Configs pull is triggered) would need this add-on
+# to expose a new authenticated HTTP endpoint — a bigger change than this
+# service takes on; worth revisiting if polling latency becomes a problem.
+
+. /usr/local/bin/build-env.sh
+
+if ! bashio::config.true "enable_git_sync"; then
+    bashio::log.info "Git vault sync disabled (enable_git_sync: false). Idling."
+    exec sleep inf
+fi
+
+GIT_REPOS="$(bashio::config 'git_repos')"
+if [ -z "${GIT_REPOS}" ]; then
+    bashio::log.warning "enable_git_sync is true but git_repos is empty. Idling."
+    exec sleep inf
+fi
+
+GIT_SYNC_INTERVAL="$(bashio::config 'git_sync_interval' 2>/dev/null || echo 900)"
+
+GIT_AUTH_TOKEN=""
+if bashio::config.has_value "git_auth_token"; then
+    GIT_AUTH_TOKEN="$(bashio::config 'git_auth_token')"
+fi
+
+MIRROR_ROOT="/data/git-mirrors"
+mkdir -p "${MIRROR_ROOT}"
+
+# sync_repo VAULT_RELATIVE_PATH REMOTE_URL BRANCH
+sync_repo() {
+    local rel_path="$1" url="$2" branch="$3"
+    local work_tree="${VAULT_PATH}/${rel_path}"
+    # Mirror name derived from the relative path so distinct repos never
+    # collide, without depending on path characters being filesystem-safe.
+    local mirror_name
+    mirror_name="$(printf '%s' "${rel_path}" | tr -c 'A-Za-z0-9' '_')"
+    local git_dir="${MIRROR_ROOT}/${mirror_name}.git"
+
+    local -a auth_args=()
+    if [ -n "${GIT_AUTH_TOKEN}" ]; then
+        # Passed per-invocation only — never persisted to the mirror's on-disk
+        # git config, so the token never touches the vault or survives in a
+        # file an Obsidian Sync bug could ever expose.
+        local auth_header
+        auth_header="Authorization: Basic $(printf 'x-access-token:%s' "${GIT_AUTH_TOKEN}" | base64 -w0)"
+        auth_args=(-c "http.extraheader=${auth_header}")
+    fi
+
+    mkdir -p "${work_tree}"
+
+    if [ ! -d "${git_dir}" ]; then
+        bashio::log.info "Adopting existing directory '${rel_path}' into git (${url}, branch ${branch})"
+        git --git-dir="${git_dir}" init --quiet
+        git --git-dir="${git_dir}" --work-tree="${work_tree}" remote add origin "${url}"
+        if ! git --git-dir="${git_dir}" "${auth_args[@]}" fetch --quiet origin "${branch}"; then
+            bashio::log.warning "Could not fetch '${rel_path}' from ${url} — removing incomplete mirror, will retry next cycle."
+            rm -rf "${git_dir}"
+            return 1
+        fi
+        # reset --hard only touches files tracked at that commit; any
+        # untracked files already in the vault directory are left alone.
+        git --git-dir="${git_dir}" --work-tree="${work_tree}" reset --hard "origin/${branch}" --quiet
+        bashio::log.info "Adopted '${rel_path}' at origin/${branch}"
+        return 0
+    fi
+
+    if ! git --git-dir="${git_dir}" "${auth_args[@]}" fetch --quiet origin "${branch}"; then
+        bashio::log.warning "Fetch failed for '${rel_path}' (${url}) — will retry next cycle."
+        return 1
+    fi
+
+    local before after
+    before="$(git --git-dir="${git_dir}" rev-parse HEAD 2>/dev/null || echo none)"
+    if ! git --git-dir="${git_dir}" --work-tree="${work_tree}" merge --ff-only --quiet "origin/${branch}"; then
+        bashio::log.warning "'${rel_path}' cannot fast-forward to origin/${branch} — local changes exist in the vault copy. Skipping to avoid clobbering them; resolve manually."
+        return 1
+    fi
+    after="$(git --git-dir="${git_dir}" rev-parse HEAD 2>/dev/null || echo none)"
+
+    if [ "${before}" != "${after}" ]; then
+        bashio::log.info "Updated '${rel_path}' -> $(git --git-dir="${git_dir}" log -1 --format=%h)"
+    fi
+}
+
+bashio::log.info "Git vault sync enabled (interval: ${GIT_SYNC_INTERVAL}s)"
+
+while true; do
+    while IFS='|' read -r rel_path url branch; do
+        # Skip blank lines and comments.
+        case "${rel_path}" in
+            ''|'#'*) continue ;;
+        esac
+        branch="${branch:-main}"
+        sync_repo "${rel_path}" "${url}" "${branch}"
+    done <<< "${GIT_REPOS}"
+
+    sleep "${GIT_SYNC_INTERVAL}"
+done

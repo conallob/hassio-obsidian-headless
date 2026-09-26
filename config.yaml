@@ -110,6 +110,27 @@ options:
   # Optional: HA image_processing entity_id to pass in the OCR payload.
   ha_ocr_entity: ""
 
+  # --- Git-tracked vault subdirectories (opt-in) ---
+  # Some vault subfolders may themselves be git repos on other devices (e.g.
+  # cloned on a Mac) whose .git/ metadata Obsidian Sync does not propagate.
+  # This periodically pulls configured repos directly from their remotes.
+  enable_git_sync: false
+
+  # One repo per line: "<vault-relative-path>|<remote-url>[|<branch>]"
+  # Branch defaults to "main" if omitted. Lines starting with "#" and blank
+  # lines are ignored. Example:
+  #   Homelab|https://github.com/conallob/homelab.git
+  #   Professional Artifacts|https://github.com/conallob/professional-artifacts.git|main
+  git_repos: ""
+
+  # How often to fetch/pull all configured repos (seconds).
+  git_sync_interval: 900
+
+  # GitHub personal access token (fine-grained, read-only, scoped to just the
+  # private repos above) — only needed if any git_repos entry is private.
+  # Never written to disk; passed per-request via an HTTP auth header only.
+  git_auth_token: ~
+
 schema:
   obsidian_auth_token: str?
   vault_name: str
@@ -130,3 +151,7 @@ schema:
   ha_ocr_url: str?
   ha_ocr_token: password?
   ha_ocr_entity: str?
+  enable_git_sync: bool
+  git_repos: str?
+  git_sync_interval: int?
+  git_auth_token: password?

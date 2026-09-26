@@ -73,9 +73,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
 # Shared libraries CPython's standard extension modules link against
 # (_ssl, _hashlib, zlib, bz2, lzma, sqlite3, pyexpat, _ctypes). apt's own
 # python3 package is NOT installed here — see the Python 3.12 runtime copy
-# below for why.
+# below for why. git is for the vault-git-sync service (periodic pull of
+# git-tracked vault subdirectories), not for any build step in this stage.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ripgrep \
+    git \
     libssl3 \
     libffi8 \
     zlib1g \
@@ -112,6 +114,7 @@ RUN chmod +x \
     /etc/s6-overlay/s6-rc.d/obsidian-sync/run \
     /etc/s6-overlay/s6-rc.d/obsidian-mcp-server/run \
     /etc/s6-overlay/s6-rc.d/remarkable-sync/run \
+    /etc/s6-overlay/s6-rc.d/vault-git-sync/run \
     /usr/local/bin/build-env.sh \
     /usr/local/bin/remarkable-sync
 
