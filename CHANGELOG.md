@@ -1,3 +1,11 @@
+## 0.0.23
+
+## What's Changed
+* fix: default optional config fields to "" instead of YAML null by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/39
+
+
+**Full Changelog**: https://github.com/conallob/hassio-obsidian-headless/compare/v0.0.22...v0.0.23
+
 ## 0.0.22
 
 ## What's Changed
