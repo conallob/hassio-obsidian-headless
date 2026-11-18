@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout source add-on repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Resolve version from tag
         id: version
@@ -24,7 +24,7 @@ jobs:
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout hassio-addons repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: conallob/hassio-addons
           token: ${{ secrets.HASSIO_ADDONS_PAT }}
