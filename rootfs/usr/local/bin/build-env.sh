@@ -54,10 +54,16 @@ export VAULT_MCP_PORT="8420"
 export VAULT_MCP_TOKEN="$(_opt mcp_auth_token)"
 export VAULT_OAUTH_CLIENT_ID="$(_opt oauth_client_id)"
 export VAULT_OAUTH_CLIENT_SECRET="$(_opt oauth_client_secret)"
-# Disable upstream's DNS-rebinding Host-header allowlist: clients may reach
-# this server via a LAN IP, mDNS name, or a Tailscale hostname, none of which
-# can be known ahead of time.
-export VAULT_MCP_ALLOWED_HOSTS="*"
+# Upstream's DNS-rebinding Host-header allowlist (transport_security.py)
+# matches the incoming Host header by EXACT string, with only a literal
+# "hostname:*" suffix wildcarding the port -- a bare "*" is NOT a wildcard
+# for "any host" and never matches anything, so it must never be used here.
+# "127.0.0.1:*"/"localhost:*"/"[::1]:*" are already allowed unconditionally
+# by obsidian-vault-mcp itself; mcp_allowed_hosts supplies whatever hostname
+# clients actually connect with externally (LAN IP, mDNS name, Tailscale
+# hostname, or your Cloudflare Tunnel hostname) -- there is no way to infer
+# this automatically, so it must be configured explicitly.
+export VAULT_MCP_ALLOWED_HOSTS="$(_opt mcp_allowed_hosts)"
 
 # --- Tunnel mode ---
 export TUNNEL_MODE="$(_opt tunnel_mode)"

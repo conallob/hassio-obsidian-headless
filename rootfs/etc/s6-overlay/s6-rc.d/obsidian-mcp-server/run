@@ -14,6 +14,17 @@ fi
 
 bashio::log.info "Starting Obsidian MCP server (tunnel: ${TUNNEL_MODE})"
 
+# --- Validate allowed-hosts config ---
+# obsidian-vault-mcp's Host-header allowlist matches the incoming Host
+# header by exact string (only "127.0.0.1"/"localhost"/"[::1]" are allowed
+# unconditionally) -- any external tunnel_mode needs mcp_allowed_hosts set
+# to the actual hostname clients will connect with, or every request gets
+# rejected with "Invalid Host header" regardless of auth being otherwise
+# correct.
+if [ "${TUNNEL_MODE}" != "none" ] && [ -z "${VAULT_MCP_ALLOWED_HOSTS}" ]; then
+    bashio::log.warning "mcp_allowed_hosts is empty -- requests via any hostname other than 127.0.0.1/localhost will be rejected with 'Invalid Host header'. Set it to the hostname clients actually connect with (e.g. your Cloudflare Tunnel or Tailscale hostname)."
+fi
+
 # --- Validate auth config ---
 # obsidian-vault-mcp's own auth middleware unconditionally requires
 # VAULT_MCP_TOKEN to be set (it 500s on every request with "Server

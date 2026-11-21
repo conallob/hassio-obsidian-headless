@@ -35,6 +35,14 @@ configuration:
     description: >-
       OAuth 2.1 client secret. Required when using OAuth for MCP auth.
       Generate with: `openssl rand -hex 32`
+  mcp_allowed_hosts:
+    name: MCP Allowed Hosts
+    description: >-
+      Comma-separated Host header value(s) clients will connect with, e.g.
+      'homeassistant.local:8420' or 'obsidian.conall.dev'. Required (besides
+      127.0.0.1/localhost, always allowed) for any external tunnel_mode, or
+      requests fail with 'Invalid Host header'. Must match exactly; a
+      trailing ':*' wildcards the port only.
   tunnel_mode:
     name: Tunnel Mode
     description: >-
