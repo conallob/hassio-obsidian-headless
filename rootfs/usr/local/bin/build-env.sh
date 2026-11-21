@@ -56,15 +56,15 @@ export VAULT_MCP_TOKEN="$(_opt mcp_auth_token)"
 # grant) are deliberately not exposed here -- they're just another static
 # shared secret, no stronger than VAULT_MCP_TOKEN, and repeatedly got
 # confused with real identity-provider OAuth credentials. mcp_auth_token
-# and oauth_username/oauth_password below cover every shared-secret shape
+# and oauth_login_username/oauth_login_password below cover every shared-secret shape
 # this add-on actually needs to support.
 # Shared username/password checked at the /oauth/authorize login screen for
 # a full authorization-code flow (e.g. Claude.ai's connector UI, which does
 # dynamic client registration then redirects here) -- a single fixed
 # credential pair, not per-user auth. Unused (routes not even mounted) when
 # VAULT_MCP_CF_ACCESS_TEAM_DOMAIN/AUD are both set below.
-export VAULT_OAUTH_USERNAME="$(_opt oauth_username)"
-export VAULT_OAUTH_PASSWORD="$(_opt oauth_password)"
+export VAULT_OAUTH_USERNAME="$(_opt oauth_login_username)"
+export VAULT_OAUTH_PASSWORD="$(_opt oauth_login_password)"
 # Upstream's DNS-rebinding Host-header allowlist (transport_security.py)
 # matches the incoming Host header by EXACT string, with only a literal
 # "hostname:*" suffix wildcarding the port -- a bare "*" is NOT a wildcard
@@ -85,8 +85,8 @@ export TLS_KEY_PATH="$(_opt tls_key_path)"
 # obsidian-vault-mcp validates Cloudflare Access's own JWT directly when both
 # of these are set (its own auth.py reads them under these exact names), and
 # skips its VAULT_MCP_TOKEN/VAULT_OAUTH_* requirement entirely in that mode.
-export VAULT_MCP_CF_ACCESS_TEAM_DOMAIN="$(_opt cf_access_team_domain)"
-export VAULT_MCP_CF_ACCESS_AUD="$(_opt cf_access_aud)"
+export VAULT_MCP_CF_ACCESS_TEAM_DOMAIN="$(_opt cloudflare_access_team_domain)"
+export VAULT_MCP_CF_ACCESS_AUD="$(_opt cloudflare_access_aud)"
 
 # --- reMarkable sync ---
 # The remarkable-sync/run s6 script sets ENABLE_REMARKABLE/SYNC_INTERVAL/etc.

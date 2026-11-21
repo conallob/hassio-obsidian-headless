@@ -54,8 +54,8 @@ options:
   enable_mcp: false
 
   # MCP auth. Required for every tunnel_mode except "none" (trusted local
-  # network) and native Cloudflare Access mode (cf_access_team_domain +
-  # cf_access_aud, below) — see DOCS.md for the full picture. There is no
+  # network) and native Cloudflare Access mode (cloudflare_access_team_domain +
+  # cloudflare_access_aud, below) — see DOCS.md for the full picture. There is no
   # way to gate this server with real per-user identity (e.g. your Google
   # account) other than native Cloudflare Access mode; everything below is a
   # static shared secret, regardless of shape.
@@ -67,12 +67,12 @@ options:
   # shared username/password pair, not per-user/per-identity auth and not
   # connected to any identity provider -- just a different shape of shared
   # secret than mcp_auth_token, needed only because some clients require
-  # this specific flow. Without oauth_password set, that login screen fails
+  # this specific flow. Without oauth_login_password set, that login screen fails
   # closed and such clients cannot complete registration. Not used, and not
-  # mounted at all, when cf_access_team_domain/cf_access_aud are both set —
+  # mounted at all, when cloudflare_access_team_domain/cloudflare_access_aud are both set —
   # see DOCS.md for why those two auth models are mutually exclusive.
-  oauth_username: "obsidian"
-  oauth_password: ""
+  oauth_login_username: "obsidian"
+  oauth_login_password: ""
 
   # Comma-separated Host header value(s) clients will actually connect with
   # (DNS-rebinding protection -- requests with any other Host header are
@@ -94,8 +94,8 @@ options:
   #                proxy. Requires mcp_auth_token.
   # "cloudflare" — traffic arrives via a Cloudflare Tunnel managed by the
   #                separate cloudflared add-on; this add-on does not run any
-  #                tunnel client itself. Set cf_access_team_domain AND
-  #                cf_access_aud (below) to have obsidian-vault-mcp validate
+  #                tunnel client itself. Set cloudflare_access_team_domain AND
+  #                cloudflare_access_aud (below) to have obsidian-vault-mcp validate
   #                Cloudflare Access's own JWT directly — real per-user auth
   #                via your identity provider (e.g. Google), with no
   #                mcp_auth_token needed. Without both of those set, falls
@@ -117,10 +117,10 @@ options:
   # shared secret. Leave both blank to use mcp_auth_token instead.
   # Team domain: Zero Trust → Settings → Custom Pages (or your team name
   # followed by .cloudflareaccess.com).
-  cf_access_team_domain: ""
+  cloudflare_access_team_domain: ""
   # Application Audience (AUD) tag: Zero Trust → Access → Applications →
   # your app → Overview.
-  cf_access_aud: ""
+  cloudflare_access_aud: ""
 
   # --- reMarkable sync (opt-in) ---
   # Pair your device at http://<ha-ip>:8421/ — rmapi (the CLI this add-on
@@ -182,15 +182,15 @@ schema:
   vault_password: password?
   enable_mcp: bool
   mcp_auth_token: password?
-  oauth_username: str?
-  oauth_password: password?
+  oauth_login_username: str?
+  oauth_login_password: password?
   mcp_allowed_hosts: str?
   tunnel_mode: "list(none|tailscale|https|cloudflare)"
   tailscale_auth_key: password?
   tls_cert_path: str?
   tls_key_path: str?
-  cf_access_team_domain: str?
-  cf_access_aud: str?
+  cloudflare_access_team_domain: str?
+  cloudflare_access_aud: str?
   enable_remarkable: bool
   remarkable_output_dir: str?
   remarkable_sync_interval: int?
