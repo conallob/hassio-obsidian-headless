@@ -1,3 +1,12 @@
+## 0.0.24
+
+## What's Changed
+* Add Dependabot config for Go modules, Dockerfile and GitHub Actions by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/40
+* feat: native Cloudflare Access JWT validation; fix mcp_auth_token requirement by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/45
+
+
+**Full Changelog**: https://github.com/conallob/hassio-obsidian-headless/compare/v0.0.23...v0.0.24
+
 ## 0.0.23
 
 ## What's Changed
