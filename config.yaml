@@ -60,6 +60,17 @@ options:
   oauth_client_id: "vault-mcp-client"
   oauth_client_secret: ""
 
+  # Comma-separated Host header value(s) clients will actually connect with
+  # (DNS-rebinding protection -- requests with any other Host header are
+  # rejected with "Invalid Host header"). "127.0.0.1"/"localhost"/"[::1]"
+  # are always allowed and don't need listing here. Examples:
+  #   homeassistant.local:8420
+  #   your-tailscale-hostname:8420
+  #   hostname.example.com
+  # Must match exactly (a trailing ":*" wildcards the port, nothing else
+  # does) -- there is no "allow any host" value.
+  mcp_allowed_hosts: ""
+
   # --- Tunnel mode (only relevant when enable_mcp is true) ---
   # "none"       — port 8420 exposed directly (use HA firewall / VPN)
   # "tailscale"  — add-on joins your tailnet; port not needed externally.
@@ -158,6 +169,7 @@ schema:
   mcp_auth_token: password?
   oauth_client_id: str?
   oauth_client_secret: password?
+  mcp_allowed_hosts: str?
   tunnel_mode: "list(none|tailscale|https|cloudflare)"
   tailscale_auth_key: password?
   tls_cert_path: str?
