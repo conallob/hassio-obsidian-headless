@@ -1,3 +1,12 @@
+## 0.0.26
+
+## What's Changed
+* feat: expose oauth_username/oauth_password for the /oauth/authorize login by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/47
+* simplify: remove oauth_client_id/oauth_client_secret by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/48
+
+
+**Full Changelog**: https://github.com/conallob/hassio-obsidian-headless/compare/v0.0.25...v0.0.26
+
 ## 0.0.25
 
 ## What's Changed
