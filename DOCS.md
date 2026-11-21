@@ -141,33 +141,38 @@ described below.
 
 ### Authentication
 
-At least one of these must be set:
-
 - **Bearer token** (`mcp_auth_token`): a long random secret. Generate one with:
   ```bash
   openssl rand -hex 32
   ```
-- **OAuth 2.1** (`oauth_client_secret`): for integration with external OAuth providers.
-  Set `oauth_client_id` to customise the client ID (default: `vault-mcp-client`).
+  `obsidian-vault-mcp`'s own auth middleware unconditionally requires this to be set —
+  it 500s on every request with `"Server misconfigured: no auth token set"` otherwise.
+  It is required for every `tunnel_mode` except `none` (trusted local network) and
+  native Cloudflare Access mode (see below).
+- **OAuth 2.1** (`oauth_client_secret`): layered *on top of* the bearer token, not a
+  substitute for it — it configures an additional `client_credentials` grant for
+  issuing per-client OAuth tokens. Set `oauth_client_id` to customise the client ID
+  (default: `vault-mcp-client`). These are **not** your identity provider's real OAuth
+  client credentials (e.g. not a Google Cloud OAuth client) — they're an arbitrary
+  shared secret you invent yourself and configure identically in your MCP client.
 
 > **Local-only unauthenticated mode**: if `tunnel_mode: none`, port 8420 does
 > _not_ require a bearer token. This is acceptable on a trusted local network.
-> Any external path — Tailscale or HTTPS proxy — enforces auth.
+> Any external path — Tailscale, HTTPS proxy, or Cloudflare Tunnel — enforces auth.
 
 ### Tunnel mode (`tunnel_mode`)
 
 | Value | Description | Auth requirement |
 |---|---|---|
 | `none` (default) | Port 8420 on your local network only | None required (warns if unset) |
-| `tailscale` | Add-on joins your tailnet; set `tailscale_auth_key` | **`oauth_client_secret` required** |
-| `https` | Expects an external reverse proxy; set `tls_cert_path` / `tls_key_path` | `mcp_auth_token` or `oauth_client_secret` |
-| `cloudflare` | Traffic arrives via a Cloudflare Tunnel — see below | **`oauth_client_secret` required** |
+| `tailscale` | Add-on joins your tailnet; set `tailscale_auth_key` | **`mcp_auth_token` + `oauth_client_secret` required** |
+| `https` | Expects an external reverse proxy; set `tls_cert_path` / `tls_key_path` | **`mcp_auth_token` required** |
+| `cloudflare` | Traffic arrives via a Cloudflare Tunnel — see below | **`cf_access_team_domain`+`cf_access_aud`**, or **`mcp_auth_token` + `oauth_client_secret`** |
 
-`tailscale` and `cloudflare` require `oauth_client_secret` specifically, not just any
-credential. Tailscale network membership and "this request came through the Cloudflare
-Tunnel" both prove *where* a request came from, not *who* sent it — a shared bearer
-token doesn't add real identity on top of that. Pair OAuth mode with Tailscale's own
-identity-aware ACLs, or (for `cloudflare`) Cloudflare Access, for actual per-user auth.
+`tailscale` additionally requires `oauth_client_secret` on top of the bearer token:
+Tailscale network membership alone proves *where* a request came from, not *who* sent
+it. Pair OAuth mode with Tailscale's own identity-aware ACLs for actual per-user auth.
+`cloudflare` mode has a better option than this — see below.
 
 > **Note on Home Assistant Ingress**: this add-on does not use HA's built-in
 > ingress panel for the MCP server. HA ingress authenticates the *browser* (via
@@ -182,9 +187,9 @@ identity-aware ACLs, or (for `cloudflare`) Cloudflare Access, for actual per-use
 
 This add-on does **not** run a `cloudflared` client itself — tunnel connectivity is
 managed by a separate `cloudflared` add-on. Setting `tunnel_mode: cloudflare` here only
-affects auth validation (requiring `oauth_client_secret`); you still need to configure
-the tunnel and hostname routing in the `cloudflared` add-on/Cloudflare dashboard
-yourself, pointing the public hostname at `http://localhost:8420` on this add-on's host.
+affects auth validation; you still need to configure the tunnel and hostname routing in
+the `cloudflared` add-on/Cloudflare dashboard yourself, pointing the public hostname at
+`http://localhost:8420` on this add-on's host.
 
 **Recommended: gate the tunnel hostname with Cloudflare Access + an identity provider**
 so requests are authenticated by a real login, not just a shared secret:
@@ -193,18 +198,28 @@ so requests are authenticated by a real login, not just a shared secret:
    add e.g. **Google** (works with any Google account, not just Workspace).
 2. **Create a self-hosted Access application** for your tunnel hostname: **Access
    controls → Applications → Create new application → "Self-hosted and private"**.
-3. **Add an Allow policy** — e.g. rule type **Emails**, value = your specific address —
+3. **Add an Allow policy** — e.g. rule type **Emails**, value = your specific address(es) —
    so only you pass.
-4. **Turn on Managed OAuth** (the application's **Advanced settings** tab). Without this,
-   a non-browser MCP client hits a plain `302` login redirect it can't follow. With it,
-   Access returns a `401` + `WWW-Authenticate` header pointing at its own OAuth discovery
-   endpoints (RFC 8414/9728), and the MCP client completes a real OAuth 2.0
-   authorization-code flow — opening your browser, logging you in via your identity
-   provider, and getting back a token for subsequent requests.
+4. **Set `cf_access_team_domain` and `cf_access_aud`** in this add-on's config:
+   - `cf_access_team_domain`: your Zero Trust team domain, e.g. `your-team.cloudflareaccess.com`.
+   - `cf_access_aud`: the Application Audience (AUD) tag shown on the Access
+     application's **Overview** tab.
 
-With Access + Managed OAuth in front, you can rely on it as the sole gate and leave this
-add-on's own `oauth_client_secret` as a secondary layer, or keep both for defense in
-depth.
+   With both set, `obsidian-vault-mcp` validates Cloudflare Access's JWT directly —
+   its own bearer/OAuth routes aren't even mounted in this mode, so **`mcp_auth_token`
+   and `oauth_client_secret` are not needed at all**. This is the recommended setup:
+   Access + your identity provider become the sole, real per-user auth gate, with no
+   separate shared secret duplicated at the application layer.
+5. **Also protect the Cloudflare Tunnel's public hostname itself** (not just the Access
+   Application) by enabling **"Protect with Access"** on the tunnel's public hostname
+   config and pasting in the same AUD tag — this makes `cloudflared` validate the Access
+   JWT before ever proxying to this add-on, as a second check in front of the first.
+
+If you'd rather not set up Cloudflare Access, leave `cf_access_team_domain`/
+`cf_access_aud` blank and `cloudflare` mode falls back to requiring `mcp_auth_token` +
+`oauth_client_secret`, same as `tailscale` — a shared secret rather than a real login,
+since "this request came through the Cloudflare Tunnel" alone only proves *where* a
+request came from, not *who* sent it.
 
 ### Connecting Claude.ai
 
@@ -360,7 +375,8 @@ sync by restarting the add-on, or lower the interval.
 | Logs show `vault_name is required` | Set `vault_name` in the add-on config |
 | Sync fails with auth error | Token may have expired — re-run the token generator at port 8422 |
 | `vault_password` error | Set `vault_password` if your vault uses E2E encryption |
-| MCP server won't start | Set at least one of `mcp_auth_token` or `oauth_client_secret` |
+| MCP server won't start | Set `mcp_auth_token` (required for every `tunnel_mode` except `none`, and `cloudflare` without `cf_access_team_domain`/`cf_access_aud` set) |
+| `{"error":"Server misconfigured: no auth token set"}` | `oauth_client_secret` alone never satisfies this — set `mcp_auth_token`, or (for `tunnel_mode: cloudflare`) set `cf_access_team_domain` + `cf_access_aud` instead |
 | Config changes revert to defaults | Ensure `password` fields are either unset or contain a non-empty value |
 | reMarkable registration returns HTTP 405 | Try a fresh pairing code — codes expire after ~5 minutes |
 

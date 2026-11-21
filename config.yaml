@@ -69,10 +69,13 @@ options:
   # "https"      — set tls_cert_path/tls_key_path; add-on expects a reverse proxy
   # "cloudflare" — traffic arrives via a Cloudflare Tunnel managed by the
   #                separate cloudflared add-on; this add-on does not run any
-  #                tunnel client itself. Requires oauth_client_secret — pair
-  #                with Cloudflare Access "Managed OAuth" and an identity
-  #                provider (e.g. Google) in front of the tunnel hostname for
-  #                real per-user authentication. See DOCS.md.
+  #                tunnel client itself. Set cf_access_team_domain AND
+  #                cf_access_aud (below) to have obsidian-vault-mcp validate
+  #                Cloudflare Access's own JWT directly — real per-user auth
+  #                via your identity provider (e.g. Google), with no separate
+  #                mcp_auth_token/oauth_client_secret needed. Without both of
+  #                those set, falls back to requiring oauth_client_secret as
+  #                a shared secret instead. See DOCS.md.
   tunnel_mode: "none"
 
   # Tailscale options (only if tunnel_mode = tailscale)
@@ -81,6 +84,17 @@ options:
   # Direct HTTPS options (only if tunnel_mode = https)
   tls_cert_path: "/ssl/fullchain.pem"
   tls_key_path: "/ssl/privkey.pem"
+
+  # Cloudflare Access options (only if tunnel_mode = cloudflare).
+  # Both required together to enable native validation of Cloudflare Access's
+  # JWT by obsidian-vault-mcp itself (VAULT_MCP_CF_ACCESS_TEAM_DOMAIN/AUD) —
+  # leave both blank to use oauth_client_secret instead.
+  # Team domain: Zero Trust → Settings → Custom Pages (or your team name
+  # followed by .cloudflareaccess.com).
+  cf_access_team_domain: ""
+  # Application Audience (AUD) tag: Zero Trust → Access → Applications →
+  # your app → Overview.
+  cf_access_aud: ""
 
   # --- reMarkable sync (opt-in) ---
   # Pair your device at http://<ha-ip>:8421/ — rmapi (the CLI this add-on
@@ -148,6 +162,8 @@ schema:
   tailscale_auth_key: password?
   tls_cert_path: str?
   tls_key_path: str?
+  cf_access_team_domain: str?
+  cf_access_aud: str?
   enable_remarkable: bool
   remarkable_output_dir: str?
   remarkable_sync_interval: int?
