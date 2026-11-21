@@ -85,6 +85,21 @@ case "${TUNNEL_MODE}" in
         ;;
 esac
 
+# --- Validate OAuth login-screen config ---
+# /oauth/authorize (a full authorization-code flow with dynamic client
+# registration, as used by e.g. Claude.ai's "Add remote MCP server" UI)
+# fails closed without oauth_password -- it's unrelated to
+# mcp_auth_token/oauth_client_secret above, which only cover a bare bearer
+# token or a pre-shared client_credentials grant. Not applicable (routes
+# not mounted) in native Cloudflare Access mode.
+cf_access_native_mode=false
+if [ -n "${VAULT_MCP_CF_ACCESS_TEAM_DOMAIN}" ] && [ -n "${VAULT_MCP_CF_ACCESS_AUD}" ]; then
+    cf_access_native_mode=true
+fi
+if [ "${cf_access_native_mode}" = false ] && [ -z "${VAULT_OAUTH_PASSWORD}" ]; then
+    bashio::log.warning "oauth_password is empty -- a client doing a full OAuth authorization-code flow (e.g. Claude.ai's connector UI) will fail to log in at /oauth/authorize. Set oauth_password (and optionally oauth_username, default 'obsidian') if you need that flow."
+fi
+
 # --- Tailscale setup ---
 if [ "${TUNNEL_MODE}" = "tailscale" ]; then
     if [ -z "${TAILSCALE_AUTH_KEY}" ]; then

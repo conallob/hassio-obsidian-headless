@@ -60,6 +60,20 @@ options:
   oauth_client_id: "vault-mcp-client"
   oauth_client_secret: ""
 
+  # OAuth login screen credentials (shown at /oauth/authorize when a client
+  # does a full OAuth authorization-code flow with dynamic client
+  # registration, e.g. Claude.ai's "Add remote MCP server" UI). This is a
+  # single shared username/password pair, not per-user/per-identity auth --
+  # it's unrelated to oauth_client_id/oauth_client_secret above (those are a
+  # separate client_credentials grant) and unrelated to any identity
+  # provider. Without oauth_password set, the authorization screen fails
+  # closed and clients relying on this flow (like Claude.ai's connector UI)
+  # cannot complete registration. Not used, and not mounted at all, when
+  # cf_access_team_domain/cf_access_aud are both set — see DOCS.md for why
+  # those two auth models are mutually exclusive.
+  oauth_username: "obsidian"
+  oauth_password: ""
+
   # Comma-separated Host header value(s) clients will actually connect with
   # (DNS-rebinding protection -- requests with any other Host header are
   # rejected with "Invalid Host header"). "127.0.0.1"/"localhost"/"[::1]"
@@ -169,6 +183,8 @@ schema:
   mcp_auth_token: password?
   oauth_client_id: str?
   oauth_client_secret: password?
+  oauth_username: str?
+  oauth_password: password?
   mcp_allowed_hosts: str?
   tunnel_mode: "list(none|tailscale|https|cloudflare)"
   tailscale_auth_key: password?

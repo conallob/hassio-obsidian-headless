@@ -35,6 +35,21 @@ configuration:
     description: >-
       OAuth 2.1 client secret. Required when using OAuth for MCP auth.
       Generate with: `openssl rand -hex 32`
+  oauth_username:
+    name: OAuth Login Username
+    description: >-
+      Shared username shown at the /oauth/authorize login screen for a full
+      OAuth authorization-code flow (e.g. Claude.ai's connector UI). A
+      single fixed credential, not per-user auth. Default: 'obsidian'.
+      Unused in native Cloudflare Access mode (cf_access_team_domain +
+      cf_access_aud both set).
+  oauth_password:
+    name: OAuth Login Password
+    description: >-
+      Shared password for the /oauth/authorize login screen. Required for
+      clients that do a full OAuth authorization-code flow (e.g. Claude.ai's
+      connector UI) -- without it, that login screen fails closed. Generate
+      with: `openssl rand -hex 32`
   mcp_allowed_hosts:
     name: MCP Allowed Hosts
     description: >-
