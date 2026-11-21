@@ -24,26 +24,18 @@ configuration:
     description: >-
       A long random secret used to authenticate MCP clients via Bearer token.
       Generate with: `openssl rand -hex 32`
-      Required when enable_mcp is true (unless using OAuth).
-  oauth_client_id:
-    name: OAuth Client ID
-    description: >-
-      OAuth 2.1 client identifier. Defaults to 'vault-mcp-client'.
-      Only needed when using OAuth authentication for the MCP server.
-  oauth_client_secret:
-    name: OAuth Client Secret
-    description: >-
-      OAuth 2.1 client secret. Required when using OAuth for MCP auth.
-      Generate with: `openssl rand -hex 32`
-  oauth_username:
+      Required when enable_mcp is true, for every tunnel_mode except 'none'
+      and native Cloudflare Access mode (cloudflare_access_team_hostname +
+      cloudflare_access_aud).
+  oauth_login_username:
     name: OAuth Login Username
     description: >-
       Shared username shown at the /oauth/authorize login screen for a full
       OAuth authorization-code flow (e.g. Claude.ai's connector UI). A
       single fixed credential, not per-user auth. Default: 'obsidian'.
-      Unused in native Cloudflare Access mode (cf_access_team_domain +
-      cf_access_aud both set).
-  oauth_password:
+      Unused in native Cloudflare Access mode (cloudflare_access_team_hostname +
+      cloudflare_access_aud both set).
+  oauth_login_password:
     name: OAuth Login Password
     description: >-
       Shared password for the /oauth/authorize login screen. Required for
@@ -64,14 +56,14 @@ configuration:
       How the MCP server is exposed externally.
       'none': only reachable on your local network (port 8420).
       'tailscale': exposed on your Tailnet via Tailscale. Requires
-      mcp_auth_token and oauth_client_secret.
+      mcp_auth_token.
       'https': expects an external reverse proxy terminating TLS. Requires
       mcp_auth_token.
       'cloudflare': traffic arrives via a Cloudflare Tunnel managed by the
-      separate cloudflared add-on. Set cf_access_team_domain and
-      cf_access_aud for native Cloudflare Access JWT validation (no
-      mcp_auth_token/oauth_client_secret needed), otherwise requires
-      mcp_auth_token and oauth_client_secret same as 'tailscale'.
+      separate cloudflared add-on. Set cloudflare_access_team_hostname and
+      cloudflare_access_aud for native Cloudflare Access JWT validation (real
+      per-user auth, no mcp_auth_token needed), otherwise requires
+      mcp_auth_token same as 'tailscale'/'https'.
   tailscale_auth_key:
     name: Tailscale Auth Key
     description: >-
@@ -89,19 +81,19 @@ configuration:
     description: >-
       Path to your TLS private key file (PEM format).
       Default: /ssl/privkey.pem
-  cf_access_team_domain:
-    name: Cloudflare Access Team Domain
+  cloudflare_access_team_hostname:
+    name: Cloudflare Access Team Hostname
     description: >-
-      Your Zero Trust team domain, e.g. 'your-team.cloudflareaccess.com'.
-      Set together with cf_access_aud to have the MCP server validate
-      Cloudflare Access JWTs directly instead of using oauth_client_secret.
+      The full hostname, not just your team name: 'your-team.cloudflareaccess.com'.
+      Set together with cloudflare_access_aud to have the MCP server validate
+      Cloudflare Access JWTs directly instead of using mcp_auth_token.
       Only used when tunnel_mode is 'cloudflare'.
-  cf_access_aud:
+  cloudflare_access_aud:
     name: Cloudflare Access Application AUD Tag
     description: >-
       The Application Audience (AUD) tag of the Access application
       protecting this hostname (Zero Trust → Access → Applications → your
-      app → Overview). Required together with cf_access_team_domain.
+      app → Overview). Required together with cloudflare_access_team_hostname.
   enable_remarkable:
     name: Enable reMarkable Sync
     description: >-
