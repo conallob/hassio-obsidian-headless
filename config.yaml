@@ -53,24 +53,24 @@ options:
   # --- MCP server (opt-in) ---
   enable_mcp: false
 
-  # MCP auth — set at least one when enable_mcp is true.
-  # Bearer-token mode: set mcp_auth_token to a long random secret.
-  # OAuth mode: set oauth_client_secret (and optionally oauth_client_id).
+  # MCP auth. Required for every tunnel_mode except "none" (trusted local
+  # network) and native Cloudflare Access mode (cf_access_team_domain +
+  # cf_access_aud, below) — see DOCS.md for the full picture. There is no
+  # way to gate this server with real per-user identity (e.g. your Google
+  # account) other than native Cloudflare Access mode; everything below is a
+  # static shared secret, regardless of shape.
   mcp_auth_token: ""
-  oauth_client_id: "vault-mcp-client"
-  oauth_client_secret: ""
 
   # OAuth login screen credentials (shown at /oauth/authorize when a client
   # does a full OAuth authorization-code flow with dynamic client
-  # registration, e.g. Claude.ai's "Add remote MCP server" UI). This is a
-  # single shared username/password pair, not per-user/per-identity auth --
-  # it's unrelated to oauth_client_id/oauth_client_secret above (those are a
-  # separate client_credentials grant) and unrelated to any identity
-  # provider. Without oauth_password set, the authorization screen fails
-  # closed and clients relying on this flow (like Claude.ai's connector UI)
-  # cannot complete registration. Not used, and not mounted at all, when
-  # cf_access_team_domain/cf_access_aud are both set — see DOCS.md for why
-  # those two auth models are mutually exclusive.
+  # registration, e.g. Claude.ai's "Add remote MCP server" UI). A single
+  # shared username/password pair, not per-user/per-identity auth and not
+  # connected to any identity provider -- just a different shape of shared
+  # secret than mcp_auth_token, needed only because some clients require
+  # this specific flow. Without oauth_password set, that login screen fails
+  # closed and such clients cannot complete registration. Not used, and not
+  # mounted at all, when cf_access_team_domain/cf_access_aud are both set —
+  # see DOCS.md for why those two auth models are mutually exclusive.
   oauth_username: "obsidian"
   oauth_password: ""
 
@@ -86,21 +86,21 @@ options:
   mcp_allowed_hosts: ""
 
   # --- Tunnel mode (only relevant when enable_mcp is true) ---
-  # "none"       — port 8420 exposed directly (use HA firewall / VPN)
+  # "none"       — port 8420 exposed directly (use HA firewall / VPN). No
+  #                auth required (but strongly recommended regardless).
   # "tailscale"  — add-on joins your tailnet; port not needed externally.
-  #                Requires oauth_client_secret (real OAuth 2.1, not just a
-  #                shared bearer secret) since Tailscale itself only proves
-  #                network membership, not identity.
-  # "https"      — set tls_cert_path/tls_key_path; add-on expects a reverse proxy
+  #                Requires mcp_auth_token.
+  # "https"      — set tls_cert_path/tls_key_path; add-on expects a reverse
+  #                proxy. Requires mcp_auth_token.
   # "cloudflare" — traffic arrives via a Cloudflare Tunnel managed by the
   #                separate cloudflared add-on; this add-on does not run any
   #                tunnel client itself. Set cf_access_team_domain AND
   #                cf_access_aud (below) to have obsidian-vault-mcp validate
   #                Cloudflare Access's own JWT directly — real per-user auth
-  #                via your identity provider (e.g. Google), with no separate
-  #                mcp_auth_token/oauth_client_secret needed. Without both of
-  #                those set, falls back to requiring oauth_client_secret as
-  #                a shared secret instead. See DOCS.md.
+  #                via your identity provider (e.g. Google), with no
+  #                mcp_auth_token needed. Without both of those set, falls
+  #                back to requiring mcp_auth_token, same as tailscale/https.
+  #                See DOCS.md.
   tunnel_mode: "none"
 
   # Tailscale options (only if tunnel_mode = tailscale)
@@ -113,7 +113,8 @@ options:
   # Cloudflare Access options (only if tunnel_mode = cloudflare).
   # Both required together to enable native validation of Cloudflare Access's
   # JWT by obsidian-vault-mcp itself (VAULT_MCP_CF_ACCESS_TEAM_DOMAIN/AUD) —
-  # leave both blank to use oauth_client_secret instead.
+  # the only auth option here backed by real per-user identity rather than a
+  # shared secret. Leave both blank to use mcp_auth_token instead.
   # Team domain: Zero Trust → Settings → Custom Pages (or your team name
   # followed by .cloudflareaccess.com).
   cf_access_team_domain: ""
@@ -181,8 +182,6 @@ schema:
   vault_password: password?
   enable_mcp: bool
   mcp_auth_token: password?
-  oauth_client_id: str?
-  oauth_client_secret: password?
   oauth_username: str?
   oauth_password: password?
   mcp_allowed_hosts: str?

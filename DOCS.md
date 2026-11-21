@@ -141,6 +141,10 @@ described below.
 
 ### Authentication
 
+There are only two auth options here, and **only one of them is backed by real
+per-user identity** — native Cloudflare Access mode (below). Everything else is a
+static shared secret, whatever shape it takes:
+
 - **Bearer token** (`mcp_auth_token`): a long random secret. Generate one with:
   ```bash
   openssl rand -hex 32
@@ -149,17 +153,13 @@ described below.
   it 500s on every request with `"Server misconfigured: no auth token set"` otherwise.
   It is required for every `tunnel_mode` except `none` (trusted local network) and
   native Cloudflare Access mode (see below).
-- **OAuth 2.1** (`oauth_client_secret`): layered *on top of* the bearer token, not a
-  substitute for it — it configures an additional `client_credentials` grant for
-  issuing per-client OAuth tokens. Set `oauth_client_id` to customise the client ID
-  (default: `vault-mcp-client`). These are **not** your identity provider's real OAuth
-  client credentials (e.g. not a Google Cloud OAuth client) — they're an arbitrary
-  shared secret you invent yourself and configure identically in your MCP client.
 - **OAuth login screen** (`oauth_username` / `oauth_password`): a **separate** thing
-  from the two above. Some MCP clients — notably Claude.ai's "Add remote MCP server"
-  UI — do a full OAuth authorization-code flow: they dynamically register themselves
-  (`/oauth/register`), then redirect to a login screen (`/oauth/authorize`) for a human
-  to approve. That screen is gated by `oauth_username`/`oauth_password`, a **single
+  from the bearer token above, not a stronger one — just a different shape of shared
+  secret, needed only because some MCP clients require this specific flow. Notably,
+  Claude.ai's "Add remote MCP server" UI does a full OAuth authorization-code flow: it
+  dynamically registers itself (`/oauth/register`), then redirects to a login screen
+  (`/oauth/authorize`) for a human to approve. That screen is gated by
+  `oauth_username`/`oauth_password`, a **single
   shared credential pair** (default username: `obsidian`), not per-user/per-identity
   auth, and **not** connected to any real identity provider. Without `oauth_password`
   set, this login screen fails closed and such clients can never complete registration.
@@ -214,14 +214,15 @@ regardless of `tunnel_mode`.
 | Value | Description | Auth requirement |
 |---|---|---|
 | `none` (default) | Port 8420 on your local network only | None required (warns if unset) |
-| `tailscale` | Add-on joins your tailnet; set `tailscale_auth_key` | **`mcp_auth_token` + `oauth_client_secret` required** |
+| `tailscale` | Add-on joins your tailnet; set `tailscale_auth_key` | **`mcp_auth_token` required** |
 | `https` | Expects an external reverse proxy; set `tls_cert_path` / `tls_key_path` | **`mcp_auth_token` required** |
-| `cloudflare` | Traffic arrives via a Cloudflare Tunnel — see below | **`cf_access_team_domain`+`cf_access_aud`**, or **`mcp_auth_token` + `oauth_client_secret`** |
+| `cloudflare` | Traffic arrives via a Cloudflare Tunnel — see below | **`cf_access_team_domain`+`cf_access_aud`** (real per-user auth), or **`mcp_auth_token`** |
 
-`tailscale` additionally requires `oauth_client_secret` on top of the bearer token:
-Tailscale network membership alone proves *where* a request came from, not *who* sent
-it. Pair OAuth mode with Tailscale's own identity-aware ACLs for actual per-user auth.
-`cloudflare` mode has a better option than this — see below.
+Only `cloudflare` mode (with `cf_access_team_domain`/`cf_access_aud` set) offers real
+per-user auth. `tailscale` and `https` both rely on `mcp_auth_token` alone — Tailscale
+network membership or "traffic arrived via a reverse proxy" only prove *where* a
+request came from, not *who* sent it, so pair `tailscale` with Tailscale's own
+identity-aware ACLs if you want real per-user auth there too.
 
 > **Note on Home Assistant Ingress**: this add-on does not use HA's built-in
 > ingress panel for the MCP server. HA ingress authenticates the *browser* (via
@@ -256,9 +257,11 @@ so requests are authenticated by a real login, not just a shared secret:
 
    With both set, `obsidian-vault-mcp` validates Cloudflare Access's JWT directly —
    its own bearer/OAuth routes aren't even mounted in this mode, so **`mcp_auth_token`
-   and `oauth_client_secret` are not needed at all**. This is the recommended setup:
-   Access + your identity provider become the sole, real per-user auth gate, with no
-   separate shared secret duplicated at the application layer.
+   is not needed at all**. This is the recommended setup: Access + your identity
+   provider become the sole, real per-user auth gate, with no shared secret duplicated
+   at the application layer. The one tradeoff: an MCP client that needs its own
+   interactive OAuth login (e.g. Claude.ai's connector UI) can't be used this way —
+   see [Connecting Claude.ai](#connecting-claudeai) below.
 5. **Also protect the Cloudflare Tunnel's public hostname itself** (not just the Access
    Application) by enabling **"Protect with Access"** on the tunnel's public hostname
    config and pasting in the same AUD tag — this makes `cloudflared` validate the Access
@@ -269,10 +272,10 @@ so requests are authenticated by a real login, not just a shared secret:
    correct; skipping it fails closed with `Invalid Host header`.
 
 If you'd rather not set up Cloudflare Access, leave `cf_access_team_domain`/
-`cf_access_aud` blank and `cloudflare` mode falls back to requiring `mcp_auth_token` +
-`oauth_client_secret`, same as `tailscale` — a shared secret rather than a real login,
-since "this request came through the Cloudflare Tunnel" alone only proves *where* a
-request came from, not *who* sent it.
+`cf_access_aud` blank and `cloudflare` mode falls back to requiring `mcp_auth_token`,
+same as `tailscale`/`https` — a shared secret rather than a real login, since "this
+request came through the Cloudflare Tunnel" alone only proves *where* a request came
+from, not *who* sent it.
 
 ### Connecting Claude.ai
 
@@ -435,7 +438,7 @@ sync by restarting the add-on, or lower the interval.
 | Sync fails with auth error | Token may have expired — re-run the token generator at port 8422 |
 | `vault_password` error | Set `vault_password` if your vault uses E2E encryption |
 | MCP server won't start | Set `mcp_auth_token` (required for every `tunnel_mode` except `none`, and `cloudflare` without `cf_access_team_domain`/`cf_access_aud` set) |
-| `{"error":"Server misconfigured: no auth token set"}` | `oauth_client_secret` alone never satisfies this — set `mcp_auth_token`, or (for `tunnel_mode: cloudflare`) set `cf_access_team_domain` + `cf_access_aud` instead |
+| `{"error":"Server misconfigured: no auth token set"}` | Set `mcp_auth_token`, or (for `tunnel_mode: cloudflare`) set `cf_access_team_domain` + `cf_access_aud` instead |
 | `Invalid Host header` (HTTP 421) | Set `mcp_allowed_hosts` to the exact hostname clients connect with (e.g. `hostname.example.com`) — there is no "allow any host" value; a bare `*` does nothing |
 | Claude.ai: "Couldn't register with ... sign-in service" | `cf_access_team_domain`/`cf_access_aud` are both set, which unmounts the OAuth routes Claude.ai's connector needs — unset them and set `oauth_username`/`oauth_password` instead, see [Authentication](#authentication) |
 | Config changes revert to defaults | Ensure `password` fields are either unset or contain a non-empty value |

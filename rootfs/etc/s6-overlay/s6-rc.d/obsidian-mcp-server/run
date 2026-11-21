@@ -28,59 +28,33 @@ fi
 # --- Validate auth config ---
 # obsidian-vault-mcp's own auth middleware unconditionally requires
 # VAULT_MCP_TOKEN to be set (it 500s on every request with "Server
-# misconfigured: no auth token set" otherwise) -- VAULT_OAUTH_CLIENT_ID/SECRET
-# only configure an *additional* client_credentials grant layered on top of
-# the bearer check, never a substitute for it. mcp_auth_token is therefore a
-# hard requirement below for every mode except "none" (trusted local network
-# only, soft warning) and native Cloudflare Access mode (see next paragraph).
-#
-# tunnel_mode: tailscale additionally requires oauth_client_secret (real
-# OAuth 2.1, not just the shared bearer secret) since Tailscale only proves
-# network membership, not identity; pair it with Tailscale's own
-# identity-aware ACLs for real per-user auth.
-#
-# tunnel_mode: cloudflare has two paths. Set cf_access_team_domain AND
-# cf_access_aud (both-or-neither) and obsidian-vault-mcp validates Cloudflare
-# Access's own JWT directly -- its bearer/OAuth routes aren't even mounted in
-# that mode, so neither mcp_auth_token nor oauth_client_secret is needed.
-# Without both of those, it falls back to requiring mcp_auth_token +
-# oauth_client_secret same as tailscale, since Cloudflare Tunnel traffic
-# alone only proves it passed through the tunnel, not who the caller is.
+# misconfigured: no auth token set" otherwise). mcp_auth_token is therefore
+# a hard requirement for every tunnel_mode except "none" (trusted local
+# network only, soft warning) and native Cloudflare Access mode, the one
+# option backed by real per-user identity rather than a shared secret: set
+# cf_access_team_domain AND cf_access_aud (both-or-neither) to have
+# obsidian-vault-mcp validate Cloudflare Access's own JWT directly instead
+# -- its bearer/OAuth routes aren't even mounted in that mode.
+cf_access_native_mode=false
+if [ -n "${VAULT_MCP_CF_ACCESS_TEAM_DOMAIN}" ] || [ -n "${VAULT_MCP_CF_ACCESS_AUD}" ]; then
+    if [ -z "${VAULT_MCP_CF_ACCESS_TEAM_DOMAIN}" ] || [ -z "${VAULT_MCP_CF_ACCESS_AUD}" ]; then
+        bashio::log.fatal "Set both cf_access_team_domain and cf_access_aud, or neither."
+        exec sleep inf
+    fi
+    cf_access_native_mode=true
+    bashio::log.info "Cloudflare Access mode: obsidian-vault-mcp validates Access JWTs directly (team: ${VAULT_MCP_CF_ACCESS_TEAM_DOMAIN}). mcp_auth_token not required."
+fi
+
 case "${TUNNEL_MODE}" in
-    cloudflare)
-        if [ -n "${VAULT_MCP_CF_ACCESS_TEAM_DOMAIN}" ] || [ -n "${VAULT_MCP_CF_ACCESS_AUD}" ]; then
-            if [ -z "${VAULT_MCP_CF_ACCESS_TEAM_DOMAIN}" ] || [ -z "${VAULT_MCP_CF_ACCESS_AUD}" ]; then
-                bashio::log.fatal "Set both cf_access_team_domain and cf_access_aud, or neither."
-                exec sleep inf
-            fi
-            bashio::log.info "Cloudflare Access mode: obsidian-vault-mcp validates Access JWTs directly (team: ${VAULT_MCP_CF_ACCESS_TEAM_DOMAIN}). mcp_auth_token/oauth_client_secret not required."
-        elif [ -z "${VAULT_MCP_TOKEN}" ]; then
-            bashio::log.fatal "mcp_auth_token is required when tunnel_mode is 'cloudflare' (unless cf_access_team_domain and cf_access_aud are both set)."
-            exec sleep inf
-        elif [ -z "${VAULT_OAUTH_CLIENT_SECRET}" ]; then
-            bashio::log.fatal "oauth_client_secret is also required when tunnel_mode is 'cloudflare' without cf_access_team_domain/cf_access_aud."
-            exec sleep inf
-        fi
-        ;;
-    tailscale)
-        if [ -z "${VAULT_MCP_TOKEN}" ]; then
-            bashio::log.fatal "mcp_auth_token is required when tunnel_mode is 'tailscale'."
-            exec sleep inf
-        fi
-        if [ -z "${VAULT_OAUTH_CLIENT_SECRET}" ]; then
-            bashio::log.fatal "oauth_client_secret is also required when tunnel_mode is 'tailscale' — Tailscale only proves network membership, not identity."
-            exec sleep inf
-        fi
-        ;;
-    https)
-        if [ -z "${VAULT_MCP_TOKEN}" ]; then
-            bashio::log.fatal "mcp_auth_token is required when tunnel_mode is 'https'."
-            exec sleep inf
+    none)
+        if [ "${cf_access_native_mode}" = false ] && [ -z "${VAULT_MCP_TOKEN}" ]; then
+            bashio::log.warning "No MCP auth configured — port 8420 is unauthenticated. Only safe on a trusted local network."
         fi
         ;;
     *)
-        if [ -z "${VAULT_MCP_TOKEN}" ]; then
-            bashio::log.warning "No MCP auth configured — port 8420 is unauthenticated. Only safe on a trusted local network."
+        if [ "${cf_access_native_mode}" = false ] && [ -z "${VAULT_MCP_TOKEN}" ]; then
+            bashio::log.fatal "mcp_auth_token is required when tunnel_mode is '${TUNNEL_MODE}' (unless cf_access_team_domain and cf_access_aud are both set)."
+            exec sleep inf
         fi
         ;;
 esac
@@ -88,14 +62,9 @@ esac
 # --- Validate OAuth login-screen config ---
 # /oauth/authorize (a full authorization-code flow with dynamic client
 # registration, as used by e.g. Claude.ai's "Add remote MCP server" UI)
-# fails closed without oauth_password -- it's unrelated to
-# mcp_auth_token/oauth_client_secret above, which only cover a bare bearer
-# token or a pre-shared client_credentials grant. Not applicable (routes
-# not mounted) in native Cloudflare Access mode.
-cf_access_native_mode=false
-if [ -n "${VAULT_MCP_CF_ACCESS_TEAM_DOMAIN}" ] && [ -n "${VAULT_MCP_CF_ACCESS_AUD}" ]; then
-    cf_access_native_mode=true
-fi
+# fails closed without oauth_password -- it's unrelated to mcp_auth_token
+# above, which only covers a bare bearer token. Not applicable (routes not
+# mounted) in native Cloudflare Access mode.
 if [ "${cf_access_native_mode}" = false ] && [ -z "${VAULT_OAUTH_PASSWORD}" ]; then
     bashio::log.warning "oauth_password is empty -- a client doing a full OAuth authorization-code flow (e.g. Claude.ai's connector UI) will fail to log in at /oauth/authorize. Set oauth_password (and optionally oauth_username, default 'obsidian') if you need that flow."
 fi
@@ -147,14 +116,15 @@ fi
 # affects auth validation above; see DOCS.md for the recommended Cloudflare
 # Access + identity provider setup in front of the tunnel, and for native
 # Access JWT validation set cf_access_team_domain/cf_access_aud instead of
-# relying on oauth_client_secret.
+# relying on mcp_auth_token.
 if [ "${TUNNEL_MODE}" = "cloudflare" ]; then
     bashio::log.info "Cloudflare tunnel mode: ensure the cloudflared add-on routes to http://localhost:${VAULT_MCP_PORT}"
 fi
 
 # --- Launch MCP server ---
 # vault-mcp reads all configuration from environment variables (see build-env.sh).
-# VAULT_PATH, VAULT_MCP_PORT, VAULT_MCP_TOKEN, VAULT_OAUTH_CLIENT_* are already exported.
+# VAULT_PATH, VAULT_MCP_PORT, VAULT_MCP_TOKEN, VAULT_OAUTH_USERNAME/PASSWORD,
+# VAULT_MCP_CF_ACCESS_* are already exported.
 #
 # Invoked via `python3 <script>` rather than executing the script directly:
 # pip bakes the builder stage's interpreter path into the shebang

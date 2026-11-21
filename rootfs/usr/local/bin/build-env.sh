@@ -52,8 +52,12 @@ export ENABLE_MCP="$(_opt enable_mcp)"
 export VAULT_MCP_HOST="0.0.0.0"
 export VAULT_MCP_PORT="8420"
 export VAULT_MCP_TOKEN="$(_opt mcp_auth_token)"
-export VAULT_OAUTH_CLIENT_ID="$(_opt oauth_client_id)"
-export VAULT_OAUTH_CLIENT_SECRET="$(_opt oauth_client_secret)"
+# VAULT_OAUTH_CLIENT_ID/SECRET (upstream's separate client_credentials
+# grant) are deliberately not exposed here -- they're just another static
+# shared secret, no stronger than VAULT_MCP_TOKEN, and repeatedly got
+# confused with real identity-provider OAuth credentials. mcp_auth_token
+# and oauth_username/oauth_password below cover every shared-secret shape
+# this add-on actually needs to support.
 # Shared username/password checked at the /oauth/authorize login screen for
 # a full authorization-code flow (e.g. Claude.ai's connector UI, which does
 # dynamic client registration then redirects here) -- a single fixed
