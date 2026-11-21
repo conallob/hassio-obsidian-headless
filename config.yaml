@@ -66,7 +66,7 @@ options:
   # are always allowed and don't need listing here. Examples:
   #   homeassistant.local:8420
   #   your-tailscale-hostname:8420
-  #   obsidian.conall.dev
+  #   hostname.example.com
   # Must match exactly (a trailing ":*" wildcards the port, nothing else
   # does) -- there is no "allow any host" value.
   mcp_allowed_hosts: ""

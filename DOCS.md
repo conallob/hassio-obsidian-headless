@@ -169,7 +169,7 @@ this can bite even with authentication fully correct. `127.0.0.1`, `localhost`, 
 `[::1]` are always allowed; any other hostname needs to be listed explicitly in
 `mcp_allowed_hosts` (comma-separated for more than one), matching the `Host` header
 your clients will actually send — e.g. `homeassistant.local:8420`, your Tailscale
-hostname, or your Cloudflare Tunnel hostname (`obsidian.conall.dev`). Entries must match
+hostname, or your Cloudflare Tunnel hostname (`hostname.example.com`). Entries must match
 exactly; only a trailing `:*` wildcards the port specifically — **there is no "allow any
 host" value**, so leaving this blank effectively locks the server to local-only access
 regardless of `tunnel_mode`.
@@ -228,7 +228,7 @@ so requests are authenticated by a real login, not just a shared secret:
    Application) by enabling **"Protect with Access"** on the tunnel's public hostname
    config and pasting in the same AUD tag — this makes `cloudflared` validate the Access
    JWT before ever proxying to this add-on, as a second check in front of the first.
-6. **Set `mcp_allowed_hosts` to your tunnel hostname** (e.g. `obsidian.conall.dev`) —
+6. **Set `mcp_allowed_hosts` to your tunnel hostname** (e.g. `hostname.example.com`) —
    see [Allowed hosts](#allowed-hosts-mcp_allowed_hosts) above. This is a separate check
    from everything above and still applies even with Access/JWT validation fully
    correct; skipping it fails closed with `Invalid Host header`.
@@ -395,7 +395,7 @@ sync by restarting the add-on, or lower the interval.
 | `vault_password` error | Set `vault_password` if your vault uses E2E encryption |
 | MCP server won't start | Set `mcp_auth_token` (required for every `tunnel_mode` except `none`, and `cloudflare` without `cf_access_team_domain`/`cf_access_aud` set) |
 | `{"error":"Server misconfigured: no auth token set"}` | `oauth_client_secret` alone never satisfies this — set `mcp_auth_token`, or (for `tunnel_mode: cloudflare`) set `cf_access_team_domain` + `cf_access_aud` instead |
-| `Invalid Host header` (HTTP 421) | Set `mcp_allowed_hosts` to the exact hostname clients connect with (e.g. `obsidian.conall.dev`) — there is no "allow any host" value; a bare `*` does nothing |
+| `Invalid Host header` (HTTP 421) | Set `mcp_allowed_hosts` to the exact hostname clients connect with (e.g. `hostname.example.com`) — there is no "allow any host" value; a bare `*` does nothing |
 | Config changes revert to defaults | Ensure `password` fields are either unset or contain a non-empty value |
 | reMarkable registration returns HTTP 405 | Try a fresh pairing code — codes expire after ~5 minutes |
 
