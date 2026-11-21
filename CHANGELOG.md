@@ -1,3 +1,16 @@
+## 0.0.25
+
+## What's Changed
+* fix: mcp_allowed_hosts config field -- VAULT_MCP_ALLOWED_HOSTS="*" was a no-op by @conallob in https://github.com/conallob/hassio-obsidian-headless/pull/46
+* build(deps): bump actions/checkout from 4 to 7 by @dependabot[bot] in https://github.com/conallob/hassio-obsidian-headless/pull/41
+* build(deps): bump actions/setup-go from 5 to 6 by @dependabot[bot] in https://github.com/conallob/hassio-obsidian-headless/pull/42
+* build(deps): bump golang from 1.26-bookworm to 1.27-bookworm by @dependabot[bot] in https://github.com/conallob/hassio-obsidian-headless/pull/43
+
+## New Contributors
+* @dependabot[bot] made their first contribution in https://github.com/conallob/hassio-obsidian-headless/pull/41
+
+**Full Changelog**: https://github.com/conallob/hassio-obsidian-headless/compare/v0.0.24...v0.0.25
+
 ## 0.0.24
 
 ## What's Changed
