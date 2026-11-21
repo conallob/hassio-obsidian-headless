@@ -54,6 +54,13 @@ export VAULT_MCP_PORT="8420"
 export VAULT_MCP_TOKEN="$(_opt mcp_auth_token)"
 export VAULT_OAUTH_CLIENT_ID="$(_opt oauth_client_id)"
 export VAULT_OAUTH_CLIENT_SECRET="$(_opt oauth_client_secret)"
+# Shared username/password checked at the /oauth/authorize login screen for
+# a full authorization-code flow (e.g. Claude.ai's connector UI, which does
+# dynamic client registration then redirects here) -- a single fixed
+# credential pair, not per-user auth. Unused (routes not even mounted) when
+# VAULT_MCP_CF_ACCESS_TEAM_DOMAIN/AUD are both set below.
+export VAULT_OAUTH_USERNAME="$(_opt oauth_username)"
+export VAULT_OAUTH_PASSWORD="$(_opt oauth_password)"
 # Upstream's DNS-rebinding Host-header allowlist (transport_security.py)
 # matches the incoming Host header by EXACT string, with only a literal
 # "hostname:*" suffix wildcarding the port -- a bare "*" is NOT a wildcard

@@ -155,6 +155,41 @@ described below.
   (default: `vault-mcp-client`). These are **not** your identity provider's real OAuth
   client credentials (e.g. not a Google Cloud OAuth client) — they're an arbitrary
   shared secret you invent yourself and configure identically in your MCP client.
+- **OAuth login screen** (`oauth_username` / `oauth_password`): a **separate** thing
+  from the two above. Some MCP clients — notably Claude.ai's "Add remote MCP server"
+  UI — do a full OAuth authorization-code flow: they dynamically register themselves
+  (`/oauth/register`), then redirect to a login screen (`/oauth/authorize`) for a human
+  to approve. That screen is gated by `oauth_username`/`oauth_password`, a **single
+  shared credential pair** (default username: `obsidian`), not per-user/per-identity
+  auth, and **not** connected to any real identity provider. Without `oauth_password`
+  set, this login screen fails closed and such clients can never complete registration.
+  This flow is only mounted at all when *not* using native Cloudflare Access mode —
+  see the next paragraph. Treat `oauth_password` as a real secret
+  (`openssl rand -hex 32`, not something memorable): a plain Cloudflare Access
+  Application in front only challenges *browser* traffic before it reaches this
+  screen — anyone who reaches the origin directly (LAN access, a tunnel
+  misconfiguration, a route Access doesn't cover) hits this login form with nothing
+  else in front of it.
+
+> **Important: real Google/SSO login and this flow are mutually exclusive.** Native
+> Cloudflare Access mode (`cf_access_team_domain` + `cf_access_aud`, see below) is the
+> only way to gate this server with your actual identity provider — but
+> `obsidian-vault-mcp` deliberately does not mount its own `/oauth/*` routes in that
+> mode (serving a second, competing, unauthenticated-by-Access login surface
+> underneath a real SSO gate would defeat the point of it). That means **Claude.ai's
+> connector UI cannot complete setup against a hostname in native Cloudflare Access
+> mode** — it needs the `/oauth/register` and `/oauth/authorize` endpoints, which
+> simply don't exist in that mode (404, surfaced by Claude.ai as "Couldn't register
+> with ... sign-in service"). If you need Claude.ai's connector UI specifically,
+> leave `cf_access_team_domain`/`cf_access_aud` blank and use `oauth_username`/
+> `oauth_password` instead — you can still put a *plain* (non-native) Cloudflare
+> Access Application in front at the edge for an outer Google-gated layer; the app
+> itself only reacts to `cf_access_team_domain`/`cf_access_aud` being set, so it
+> never knows Access is also there unless you tell it to validate the JWT directly.
+> Just be clear with yourself about what's actually authenticating the *client*:
+> with this combination, that's still the shared `oauth_username`/`oauth_password`
+> pair, not your Google identity — Access only gates interactive browser traffic in
+> front of it.
 
 > **Local-only unauthenticated mode**: if `tunnel_mode: none`, port 8420 does
 > _not_ require a bearer token. This is acceptable on a trusted local network.
@@ -245,6 +280,12 @@ In Claude.ai → Settings → Integrations → Add MCP Server:
 
 - **URL**: `http://<ha-ip>:8420/` (or your Tailscale/HTTPS/Cloudflare Tunnel URL)
 - **Auth**: Bearer token or OAuth 2.1 depending on what you configured above
+
+Claude.ai's connector UI does a full OAuth authorization-code flow with dynamic client
+registration — it needs `oauth_username`/`oauth_password` set (see
+[Authentication](#authentication) above) and will **not** work against a hostname in
+native Cloudflare Access mode (`cf_access_team_domain`/`cf_access_aud` both set);
+that mode doesn't mount the `/oauth/register`/`/oauth/authorize` endpoints it needs.
 
 ---
 
@@ -396,6 +437,7 @@ sync by restarting the add-on, or lower the interval.
 | MCP server won't start | Set `mcp_auth_token` (required for every `tunnel_mode` except `none`, and `cloudflare` without `cf_access_team_domain`/`cf_access_aud` set) |
 | `{"error":"Server misconfigured: no auth token set"}` | `oauth_client_secret` alone never satisfies this — set `mcp_auth_token`, or (for `tunnel_mode: cloudflare`) set `cf_access_team_domain` + `cf_access_aud` instead |
 | `Invalid Host header` (HTTP 421) | Set `mcp_allowed_hosts` to the exact hostname clients connect with (e.g. `hostname.example.com`) — there is no "allow any host" value; a bare `*` does nothing |
+| Claude.ai: "Couldn't register with ... sign-in service" | `cf_access_team_domain`/`cf_access_aud` are both set, which unmounts the OAuth routes Claude.ai's connector needs — unset them and set `oauth_username`/`oauth_password` instead, see [Authentication](#authentication) |
 | Config changes revert to defaults | Ensure `password` fields are either unset or contain a non-empty value |
 | reMarkable registration returns HTTP 405 | Try a fresh pairing code — codes expire after ~5 minutes |
 
