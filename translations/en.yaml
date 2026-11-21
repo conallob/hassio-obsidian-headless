@@ -25,7 +25,7 @@ configuration:
       A long random secret used to authenticate MCP clients via Bearer token.
       Generate with: `openssl rand -hex 32`
       Required when enable_mcp is true, for every tunnel_mode except 'none'
-      and native Cloudflare Access mode (cloudflare_access_team_domain +
+      and native Cloudflare Access mode (cloudflare_access_team_hostname +
       cloudflare_access_aud).
   oauth_login_username:
     name: OAuth Login Username
@@ -33,7 +33,7 @@ configuration:
       Shared username shown at the /oauth/authorize login screen for a full
       OAuth authorization-code flow (e.g. Claude.ai's connector UI). A
       single fixed credential, not per-user auth. Default: 'obsidian'.
-      Unused in native Cloudflare Access mode (cloudflare_access_team_domain +
+      Unused in native Cloudflare Access mode (cloudflare_access_team_hostname +
       cloudflare_access_aud both set).
   oauth_login_password:
     name: OAuth Login Password
@@ -60,7 +60,7 @@ configuration:
       'https': expects an external reverse proxy terminating TLS. Requires
       mcp_auth_token.
       'cloudflare': traffic arrives via a Cloudflare Tunnel managed by the
-      separate cloudflared add-on. Set cloudflare_access_team_domain and
+      separate cloudflared add-on. Set cloudflare_access_team_hostname and
       cloudflare_access_aud for native Cloudflare Access JWT validation (real
       per-user auth, no mcp_auth_token needed), otherwise requires
       mcp_auth_token same as 'tailscale'/'https'.
@@ -81,10 +81,10 @@ configuration:
     description: >-
       Path to your TLS private key file (PEM format).
       Default: /ssl/privkey.pem
-  cloudflare_access_team_domain:
-    name: Cloudflare Access Team Domain
+  cloudflare_access_team_hostname:
+    name: Cloudflare Access Team Hostname
     description: >-
-      Your Zero Trust team domain, e.g. 'your-team.cloudflareaccess.com'.
+      The full hostname, not just your team name: 'your-team.cloudflareaccess.com'.
       Set together with cloudflare_access_aud to have the MCP server validate
       Cloudflare Access JWTs directly instead of using mcp_auth_token.
       Only used when tunnel_mode is 'cloudflare'.
@@ -93,7 +93,7 @@ configuration:
     description: >-
       The Application Audience (AUD) tag of the Access application
       protecting this hostname (Zero Trust → Access → Applications → your
-      app → Overview). Required together with cloudflare_access_team_domain.
+      app → Overview). Required together with cloudflare_access_team_hostname.
   enable_remarkable:
     name: Enable reMarkable Sync
     description: >-

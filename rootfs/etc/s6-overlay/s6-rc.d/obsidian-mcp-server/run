@@ -32,13 +32,13 @@ fi
 # a hard requirement for every tunnel_mode except "none" (trusted local
 # network only, soft warning) and native Cloudflare Access mode, the one
 # option backed by real per-user identity rather than a shared secret: set
-# cloudflare_access_team_domain AND cloudflare_access_aud (both-or-neither) to have
+# cloudflare_access_team_hostname AND cloudflare_access_aud (both-or-neither) to have
 # obsidian-vault-mcp validate Cloudflare Access's own JWT directly instead
 # -- its bearer/OAuth routes aren't even mounted in that mode.
 cf_access_native_mode=false
 if [ -n "${VAULT_MCP_CF_ACCESS_TEAM_DOMAIN}" ] || [ -n "${VAULT_MCP_CF_ACCESS_AUD}" ]; then
     if [ -z "${VAULT_MCP_CF_ACCESS_TEAM_DOMAIN}" ] || [ -z "${VAULT_MCP_CF_ACCESS_AUD}" ]; then
-        bashio::log.fatal "Set both cloudflare_access_team_domain and cloudflare_access_aud, or neither."
+        bashio::log.fatal "Set both cloudflare_access_team_hostname and cloudflare_access_aud, or neither."
         exec sleep inf
     fi
     cf_access_native_mode=true
@@ -53,7 +53,7 @@ case "${TUNNEL_MODE}" in
         ;;
     *)
         if [ "${cf_access_native_mode}" = false ] && [ -z "${VAULT_MCP_TOKEN}" ]; then
-            bashio::log.fatal "mcp_auth_token is required when tunnel_mode is '${TUNNEL_MODE}' (unless cloudflare_access_team_domain and cloudflare_access_aud are both set)."
+            bashio::log.fatal "mcp_auth_token is required when tunnel_mode is '${TUNNEL_MODE}' (unless cloudflare_access_team_hostname and cloudflare_access_aud are both set)."
             exec sleep inf
         fi
         ;;
@@ -115,7 +115,7 @@ fi
 # outside it, depending on how cloudflared is deployed). This mode only
 # affects auth validation above; see DOCS.md for the recommended Cloudflare
 # Access + identity provider setup in front of the tunnel, and for native
-# Access JWT validation set cloudflare_access_team_domain/cloudflare_access_aud instead of
+# Access JWT validation set cloudflare_access_team_hostname/cloudflare_access_aud instead of
 # relying on mcp_auth_token.
 if [ "${TUNNEL_MODE}" = "cloudflare" ]; then
     bashio::log.info "Cloudflare tunnel mode: ensure the cloudflared add-on routes to http://localhost:${VAULT_MCP_PORT}"

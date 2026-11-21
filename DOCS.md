@@ -172,7 +172,7 @@ static shared secret, whatever shape it takes:
   else in front of it.
 
 > **Important: real Google/SSO login and this flow are mutually exclusive.** Native
-> Cloudflare Access mode (`cloudflare_access_team_domain` + `cloudflare_access_aud`, see below) is the
+> Cloudflare Access mode (`cloudflare_access_team_hostname` + `cloudflare_access_aud`, see below) is the
 > only way to gate this server with your actual identity provider — but
 > `obsidian-vault-mcp` deliberately does not mount its own `/oauth/*` routes in that
 > mode (serving a second, competing, unauthenticated-by-Access login surface
@@ -181,10 +181,10 @@ static shared secret, whatever shape it takes:
 > mode** — it needs the `/oauth/register` and `/oauth/authorize` endpoints, which
 > simply don't exist in that mode (404, surfaced by Claude.ai as "Couldn't register
 > with ... sign-in service"). If you need Claude.ai's connector UI specifically,
-> leave `cloudflare_access_team_domain`/`cloudflare_access_aud` blank and use `oauth_login_username`/
+> leave `cloudflare_access_team_hostname`/`cloudflare_access_aud` blank and use `oauth_login_username`/
 > `oauth_login_password` instead — you can still put a *plain* (non-native) Cloudflare
 > Access Application in front at the edge for an outer Google-gated layer; the app
-> itself only reacts to `cloudflare_access_team_domain`/`cloudflare_access_aud` being set, so it
+> itself only reacts to `cloudflare_access_team_hostname`/`cloudflare_access_aud` being set, so it
 > never knows Access is also there unless you tell it to validate the JWT directly.
 > Just be clear with yourself about what's actually authenticating the *client*:
 > with this combination, that's still the shared `oauth_login_username`/`oauth_login_password`
@@ -216,9 +216,9 @@ regardless of `tunnel_mode`.
 | `none` (default) | Port 8420 on your local network only | None required (warns if unset) |
 | `tailscale` | Add-on joins your tailnet; set `tailscale_auth_key` | **`mcp_auth_token` required** |
 | `https` | Expects an external reverse proxy; set `tls_cert_path` / `tls_key_path` | **`mcp_auth_token` required** |
-| `cloudflare` | Traffic arrives via a Cloudflare Tunnel — see below | **`cloudflare_access_team_domain`+`cloudflare_access_aud`** (real per-user auth), or **`mcp_auth_token`** |
+| `cloudflare` | Traffic arrives via a Cloudflare Tunnel — see below | **`cloudflare_access_team_hostname`+`cloudflare_access_aud`** (real per-user auth), or **`mcp_auth_token`** |
 
-Only `cloudflare` mode (with `cloudflare_access_team_domain`/`cloudflare_access_aud` set) offers real
+Only `cloudflare` mode (with `cloudflare_access_team_hostname`/`cloudflare_access_aud` set) offers real
 per-user auth. `tailscale` and `https` both rely on `mcp_auth_token` alone — Tailscale
 network membership or "traffic arrived via a reverse proxy" only prove *where* a
 request came from, not *who* sent it, so pair `tailscale` with Tailscale's own
@@ -250,8 +250,9 @@ so requests are authenticated by a real login, not just a shared secret:
    controls → Applications → Create new application → "Self-hosted and private"**.
 3. **Add an Allow policy** — e.g. rule type **Emails**, value = your specific address(es) —
    so only you pass.
-4. **Set `cloudflare_access_team_domain` and `cloudflare_access_aud`** in this add-on's config:
-   - `cloudflare_access_team_domain`: your Zero Trust team domain, e.g. `your-team.cloudflareaccess.com`.
+4. **Set `cloudflare_access_team_hostname` and `cloudflare_access_aud`** in this add-on's config:
+   - `cloudflare_access_team_hostname`: the full hostname, not just your team name —
+     `your-team.cloudflareaccess.com`.
    - `cloudflare_access_aud`: the Application Audience (AUD) tag shown on the Access
      application's **Overview** tab.
 
@@ -271,7 +272,7 @@ so requests are authenticated by a real login, not just a shared secret:
    from everything above and still applies even with Access/JWT validation fully
    correct; skipping it fails closed with `Invalid Host header`.
 
-If you'd rather not set up Cloudflare Access, leave `cloudflare_access_team_domain`/
+If you'd rather not set up Cloudflare Access, leave `cloudflare_access_team_hostname`/
 `cloudflare_access_aud` blank and `cloudflare` mode falls back to requiring `mcp_auth_token`,
 same as `tailscale`/`https` — a shared secret rather than a real login, since "this
 request came through the Cloudflare Tunnel" alone only proves *where* a request came
@@ -287,7 +288,7 @@ In Claude.ai → Settings → Integrations → Add MCP Server:
 Claude.ai's connector UI does a full OAuth authorization-code flow with dynamic client
 registration — it needs `oauth_login_username`/`oauth_login_password` set (see
 [Authentication](#authentication) above) and will **not** work against a hostname in
-native Cloudflare Access mode (`cloudflare_access_team_domain`/`cloudflare_access_aud` both set);
+native Cloudflare Access mode (`cloudflare_access_team_hostname`/`cloudflare_access_aud` both set);
 that mode doesn't mount the `/oauth/register`/`/oauth/authorize` endpoints it needs.
 
 ---
@@ -437,10 +438,10 @@ sync by restarting the add-on, or lower the interval.
 | Logs show `vault_name is required` | Set `vault_name` in the add-on config |
 | Sync fails with auth error | Token may have expired — re-run the token generator at port 8422 |
 | `vault_password` error | Set `vault_password` if your vault uses E2E encryption |
-| MCP server won't start | Set `mcp_auth_token` (required for every `tunnel_mode` except `none`, and `cloudflare` without `cloudflare_access_team_domain`/`cloudflare_access_aud` set) |
-| `{"error":"Server misconfigured: no auth token set"}` | Set `mcp_auth_token`, or (for `tunnel_mode: cloudflare`) set `cloudflare_access_team_domain` + `cloudflare_access_aud` instead |
+| MCP server won't start | Set `mcp_auth_token` (required for every `tunnel_mode` except `none`, and `cloudflare` without `cloudflare_access_team_hostname`/`cloudflare_access_aud` set) |
+| `{"error":"Server misconfigured: no auth token set"}` | Set `mcp_auth_token`, or (for `tunnel_mode: cloudflare`) set `cloudflare_access_team_hostname` + `cloudflare_access_aud` instead |
 | `Invalid Host header` (HTTP 421) | Set `mcp_allowed_hosts` to the exact hostname clients connect with (e.g. `hostname.example.com`) — there is no "allow any host" value; a bare `*` does nothing |
-| Claude.ai: "Couldn't register with ... sign-in service" | `cloudflare_access_team_domain`/`cloudflare_access_aud` are both set, which unmounts the OAuth routes Claude.ai's connector needs — unset them and set `oauth_login_username`/`oauth_login_password` instead, see [Authentication](#authentication) |
+| Claude.ai: "Couldn't register with ... sign-in service" | `cloudflare_access_team_hostname`/`cloudflare_access_aud` are both set, which unmounts the OAuth routes Claude.ai's connector needs — unset them and set `oauth_login_username`/`oauth_login_password` instead, see [Authentication](#authentication) |
 | Config changes revert to defaults | Ensure `password` fields are either unset or contain a non-empty value |
 | reMarkable registration returns HTTP 405 | Try a fresh pairing code — codes expire after ~5 minutes |
 

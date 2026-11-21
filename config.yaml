@@ -54,7 +54,7 @@ options:
   enable_mcp: false
 
   # MCP auth. Required for every tunnel_mode except "none" (trusted local
-  # network) and native Cloudflare Access mode (cloudflare_access_team_domain +
+  # network) and native Cloudflare Access mode (cloudflare_access_team_hostname +
   # cloudflare_access_aud, below) — see DOCS.md for the full picture. There is no
   # way to gate this server with real per-user identity (e.g. your Google
   # account) other than native Cloudflare Access mode; everything below is a
@@ -69,7 +69,7 @@ options:
   # secret than mcp_auth_token, needed only because some clients require
   # this specific flow. Without oauth_login_password set, that login screen fails
   # closed and such clients cannot complete registration. Not used, and not
-  # mounted at all, when cloudflare_access_team_domain/cloudflare_access_aud are both set —
+  # mounted at all, when cloudflare_access_team_hostname/cloudflare_access_aud are both set —
   # see DOCS.md for why those two auth models are mutually exclusive.
   oauth_login_username: "obsidian"
   oauth_login_password: ""
@@ -94,7 +94,7 @@ options:
   #                proxy. Requires mcp_auth_token.
   # "cloudflare" — traffic arrives via a Cloudflare Tunnel managed by the
   #                separate cloudflared add-on; this add-on does not run any
-  #                tunnel client itself. Set cloudflare_access_team_domain AND
+  #                tunnel client itself. Set cloudflare_access_team_hostname AND
   #                cloudflare_access_aud (below) to have obsidian-vault-mcp validate
   #                Cloudflare Access's own JWT directly — real per-user auth
   #                via your identity provider (e.g. Google), with no
@@ -115,9 +115,8 @@ options:
   # JWT by obsidian-vault-mcp itself (VAULT_MCP_CF_ACCESS_TEAM_DOMAIN/AUD) —
   # the only auth option here backed by real per-user identity rather than a
   # shared secret. Leave both blank to use mcp_auth_token instead.
-  # Team domain: Zero Trust → Settings → Custom Pages (or your team name
-  # followed by .cloudflareaccess.com).
-  cloudflare_access_team_domain: ""
+  # The full hostname, not just your team name: <your-team>.cloudflareaccess.com.
+  cloudflare_access_team_hostname: ""
   # Application Audience (AUD) tag: Zero Trust → Access → Applications →
   # your app → Overview.
   cloudflare_access_aud: ""
@@ -189,7 +188,7 @@ schema:
   tailscale_auth_key: password?
   tls_cert_path: str?
   tls_key_path: str?
-  cloudflare_access_team_domain: str?
+  cloudflare_access_team_hostname: str?
   cloudflare_access_aud: str?
   enable_remarkable: bool
   remarkable_output_dir: str?

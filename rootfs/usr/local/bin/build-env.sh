@@ -85,7 +85,7 @@ export TLS_KEY_PATH="$(_opt tls_key_path)"
 # obsidian-vault-mcp validates Cloudflare Access's own JWT directly when both
 # of these are set (its own auth.py reads them under these exact names), and
 # skips its VAULT_MCP_TOKEN/VAULT_OAUTH_* requirement entirely in that mode.
-export VAULT_MCP_CF_ACCESS_TEAM_DOMAIN="$(_opt cloudflare_access_team_domain)"
+export VAULT_MCP_CF_ACCESS_TEAM_DOMAIN="$(_opt cloudflare_access_team_hostname)"
 export VAULT_MCP_CF_ACCESS_AUD="$(_opt cloudflare_access_aud)"
 
 # --- reMarkable sync ---
