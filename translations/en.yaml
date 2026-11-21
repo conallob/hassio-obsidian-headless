@@ -41,11 +41,14 @@ configuration:
       How the MCP server is exposed externally.
       'none': only reachable on your local network (port 8420).
       'tailscale': exposed on your Tailnet via Tailscale. Requires
-      oauth_client_secret.
-      'https': expects an external reverse proxy terminating TLS.
+      mcp_auth_token and oauth_client_secret.
+      'https': expects an external reverse proxy terminating TLS. Requires
+      mcp_auth_token.
       'cloudflare': traffic arrives via a Cloudflare Tunnel managed by the
-      separate cloudflared add-on. Requires oauth_client_secret; pair with
-      Cloudflare Access for real per-user auth.
+      separate cloudflared add-on. Set cf_access_team_domain and
+      cf_access_aud for native Cloudflare Access JWT validation (no
+      mcp_auth_token/oauth_client_secret needed), otherwise requires
+      mcp_auth_token and oauth_client_secret same as 'tailscale'.
   tailscale_auth_key:
     name: Tailscale Auth Key
     description: >-
@@ -63,6 +66,19 @@ configuration:
     description: >-
       Path to your TLS private key file (PEM format).
       Default: /ssl/privkey.pem
+  cf_access_team_domain:
+    name: Cloudflare Access Team Domain
+    description: >-
+      Your Zero Trust team domain, e.g. 'your-team.cloudflareaccess.com'.
+      Set together with cf_access_aud to have the MCP server validate
+      Cloudflare Access JWTs directly instead of using oauth_client_secret.
+      Only used when tunnel_mode is 'cloudflare'.
+  cf_access_aud:
+    name: Cloudflare Access Application AUD Tag
+    description: >-
+      The Application Audience (AUD) tag of the Access application
+      protecting this hostname (Zero Trust → Access → Applications → your
+      app → Overview). Required together with cf_access_team_domain.
   enable_remarkable:
     name: Enable reMarkable Sync
     description: >-
