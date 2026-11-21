@@ -32,7 +32,7 @@ RUN git clone --depth 1 --branch v0.0.34 https://github.com/ddvk/rmapi.git . && 
 # newer glibc than the HA base image ships, breaking the copied binary at
 # runtime: "version `GLIBC_2.38' not found". Pinning the codename ties the
 # builder's glibc to the same release the final image (BUILD_FROM) uses.
-FROM python:3.12-slim-bookworm AS mcp-builder
+FROM python:3.15-slim-bookworm AS mcp-builder
 
 WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends git build-essential && rm -rf /var/lib/apt/lists/*
